@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MeshKit.Core/MeshKit.Core.csproj" />
+    <Project Path="src/MeshKit.Meshy/MeshKit.Meshy.csproj" />
+    <Project Path="src/MeshKit.Pipeline/MeshKit.Pipeline.csproj" />
+    <Project Path="src/MeshKit.Web/MeshKit.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MeshKit.Core.Tests/MeshKit.Core.Tests.csproj" />
+    <Project Path="tests/MeshKit.Pipeline.Tests/MeshKit.Pipeline.Tests.csproj" />
+    <Project Path="tests/MeshKit.Web.Tests/MeshKit.Web.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/MeshKit.Web/package-lock.json
+
+      - name: Build web assets (Tailwind + model-viewer)
+        working-directory: src/MeshKit.Web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Restore
+        run: dotnet restore MeshKit.slnx
+
+      - name: Build
+        run: dotnet build MeshKit.slnx -c Release --no-restore -p:SkipNpm=true
+
+      - name: Test
+        run: dotnet test MeshKit.slnx -c Release --no-build --logger "trx;LogFileName=results.trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-results
+          path: TestResults/
+          if-no-files-found: ignore

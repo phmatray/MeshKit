@@ -107,7 +107,7 @@ dotnet test  MeshKit.slnx
 dotnet run --project src/MeshKit.Web   # http://localhost:5080, catalog = ./catalog, db = ./data/meshkit.dev.db
 ```
 
-Requires .NET SDK 10.0.400+ and Node 22+. `-p:SkipNpm=true` skips the asset build (CI and Docker build
+Requires any .NET 10 SDK (10.0.100+) and Node 22+. `-p:SkipNpm=true` skips the asset build (CI and Docker build
 the assets in their own step). Secrets for local runs go in user secrets (`dotnet user-secrets set
 Stripe:SecretKey rk_test_…`), never in `appsettings.json`.
 

@@ -14,7 +14,9 @@ services:
     build: .
     container_name: meshkit
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"

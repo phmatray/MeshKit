@@ -212,6 +212,7 @@ public sealed class MeshyClient(HttpClient http, MeshyOptions options, ILogger<M
         public int Progress { get; set; }
         public Dictionary<string, string>? ModelUrls { get; set; }
         public string? ThumbnailUrl { get; set; }
+        public List<Dictionary<string, string>>? TextureUrls { get; set; }
         public TaskErrorDto? TaskError { get; set; }
         public int ConsumedCredits { get; set; }
 
@@ -229,6 +230,7 @@ public sealed class MeshyClient(HttpClient http, MeshyOptions options, ILogger<M
             Progress,
             (ModelUrls ?? []).Where(kv => !string.IsNullOrEmpty(kv.Value)).ToDictionary(kv => kv.Key, kv => kv.Value),
             ThumbnailUrl,
+            (TextureUrls ?? []).Select(IReadOnlyDictionary<string, string> (t) => t.Where(kv => !string.IsNullOrEmpty(kv.Value)).ToDictionary(kv => kv.Key, kv => kv.Value)).ToList(),
             TaskError?.Message,
             ConsumedCredits);
     }

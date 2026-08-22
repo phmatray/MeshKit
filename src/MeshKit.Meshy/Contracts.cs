@@ -34,6 +34,7 @@ public sealed record MeshyTask(
     int Progress,
     IReadOnlyDictionary<string, string> ModelUrls,
     string? ThumbnailUrl,
+    IReadOnlyList<IReadOnlyDictionary<string, string>> TextureUrls,
     string? ErrorMessage,
     int ConsumedCredits)
 {

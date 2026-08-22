@@ -1,0 +1,45 @@
+# A MeshKit pack definition. The "Generate pack" GitHub workflow turns this into a sellable pack
+# through the Meshy API: one preview (free in-browser 3D preview) and one textured refine (the
+# paid asset) per model. Prompts are capped at 600 characters by Meshy.
+slug: lowpoly-fantasy-props
+name: Low-Poly Fantasy Props
+description: >-
+  Eight game-ready fantasy props in a chunky low-poly style with PBR textures — the dungeon
+  dressing every prototype needs. GLB, FBX, OBJ and USDZ included.
+price:
+  amount: 1900
+  currency: eur
+generation:
+  ai_model: latest
+  model_type: lowpoly
+  target_polycount: 4000
+  enable_pbr: true
+  texture_resolution: 2k
+  target_formats: [glb, fbx, obj, usdz]
+models:
+  - slug: treasure-chest
+    name: Treasure Chest
+    prompt: a closed wooden treasure chest with iron bands and a rounded lid, low poly game asset, stylized
+    texture_prompt: weathered oak planks, rusted iron bands, brass lock
+  - slug: wooden-barrel
+    name: Wooden Barrel
+    prompt: a wooden storage barrel with two metal hoops, low poly game asset, stylized
+  - slug: stone-well
+    name: Stone Well
+    prompt: a round stone well with a small wooden roof and a bucket on a rope, low poly game asset, stylized
+  - slug: wooden-crate
+    name: Wooden Crate
+    prompt: a square wooden shipping crate with reinforced corners, low poly game asset, stylized
+  - slug: iron-lantern
+    name: Iron Lantern
+    prompt: a hanging iron lantern with a glass panel and a small candle, low poly game asset, stylized
+  - slug: campfire
+    name: Campfire
+    prompt: a campfire made of logs in a ring of stones, low poly game asset, stylized, no flames
+  - slug: wooden-signpost
+    name: Wooden Signpost
+    prompt: a wooden signpost with two arrow-shaped boards pointing in different directions, low poly game asset, stylized
+  - slug: clay-pot
+    name: Clay Pot
+    prompt: a large round clay storage pot with a narrow neck, low poly game asset, stylized
+    texture_prompt: terracotta with faded painted bands

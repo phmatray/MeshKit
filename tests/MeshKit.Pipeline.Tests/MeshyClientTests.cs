@@ -77,7 +77,8 @@ public class MeshyClientTests
         handler.Enqueue(HttpStatusCode.OK, """
             {"id":"task-2","status":"SUCCEEDED","progress":100,
              "model_urls":{"glb":"https://cdn/x.glb?Expires=1","fbx":"https://cdn/x.fbx"},
-             "thumbnail_url":"https://cdn/t.png","consumed_credits":30,"task_error":null}
+             "thumbnail_url":"https://cdn/t.png","consumed_credits":30,"task_error":null,
+             "texture_urls":[{"base_color":"https://cdn/bc.png","normal":"https://cdn/n.png"}]}
             """);
 
         var task = await client.GetTaskAsync("task-2", CancellationToken.None);
@@ -88,6 +89,7 @@ public class MeshyClientTests
         Assert.Equal("https://cdn/x.glb?Expires=1", task.ModelUrls["glb"]);
         Assert.Equal("https://cdn/t.png", task.ThumbnailUrl);
         Assert.Equal(30, task.ConsumedCredits);
+        Assert.Equal("https://cdn/n.png", Assert.Single(task.TextureUrls)["normal"]);
         Assert.Null(task.ErrorMessage);
     }
 

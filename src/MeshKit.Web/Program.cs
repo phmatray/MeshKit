@@ -6,6 +6,7 @@ using MeshKit.Web.Downloads;
 using MeshKit.Web.Identity;
 using MeshKit.Web.Ingest;
 using MeshKit.Web.Payments;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -50,6 +51,13 @@ builder.Services.AddScoped<IEntitlementReader, EntitlementReader>();
 
 builder.Services.AddMeshKitPayments(builder.Configuration);
 builder.Services.AddMeshKitIngest(builder.Configuration);
+
+// Persist cookie-signing keys when a path is configured (the container mounts /app/data for this);
+// without it every restart would log every buyer out.
+if (builder.Configuration["DataProtection:KeysPath"] is { Length: > 0 } keysPath)
+{
+    builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+}
 
 builder.Services.AddHealthChecks();
 

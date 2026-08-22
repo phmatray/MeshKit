@@ -1,0 +1,15 @@
+.git
+.github
+docs
+tests
+catalog
+data
+dist
+**/bin
+**/obj
+**/node_modules
+**/TestResults
+src/MeshKit.Web/wwwroot/css
+src/MeshKit.Web/wwwroot/js
+*.md
+.env

@@ -133,7 +133,7 @@ internal static class Cli
         }
 
         PackArchiver.Zip(packDir, zipPath);
-        Console.WriteLine($"Wrote {zipPath} ({new FileInfo(zipPath).Length / 1024 / 1024.0:0.0} MiB)");
+        Console.WriteLine($"Wrote {zipPath} ({(new FileInfo(zipPath).Length / 1024 / 1024.0).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)} MiB)");
         return 0;
     }
 

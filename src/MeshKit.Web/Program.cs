@@ -4,6 +4,7 @@ using MeshKit.Web.Components;
 using MeshKit.Web.Data;
 using MeshKit.Web.Downloads;
 using MeshKit.Web.Identity;
+using MeshKit.Web.Payments;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -64,7 +65,7 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/error", createScopeForErrors: true);
 }
 
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+app.UseNotFoundPage();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();

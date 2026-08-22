@@ -1,0 +1,56 @@
+@page "/library"
+@attribute [Authorize]
+@inject ICatalogService Catalog
+@inject IEntitlementReader Entitlements
+@inject IHttpContextAccessor HttpContextAccessor
+
+<PageTitle>My library — MeshKit</PageTitle>
+
+<h1 class="mb-2 text-3xl font-bold">My library</h1>
+<p class="mb-8 text-ink/70">Every pack you bought, ready to download again whenever you need it.</p>
+
+@if (_packs.Count == 0)
+{
+    <div class="rounded-2xl border border-dashed border-ink/20 p-10 text-center text-ink/60">
+        <p>No packs yet.</p>
+        <a href="packs" class="mt-4 inline-block rounded-full bg-coral px-5 py-2 font-semibold text-ink hover:bg-coral-dark">Browse packs</a>
+    </div>
+}
+else
+{
+    <ul class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" aria-label="Purchased packs">
+        @foreach (var pack in _packs)
+        {
+            <li class="flex flex-col overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-sm">
+                <a href="packs/@pack.Slug" class="block aspect-[4/3] bg-ink/5">
+                    @if (pack.Models.FirstOrDefault(m => m.Thumbnail is not null)?.Thumbnail is { } thumb)
+                    {
+                        <img src="@CatalogEndpoints.PublicUrl(pack.Slug, thumb)" alt="" class="h-full w-full object-cover" />
+                    }
+                </a>
+                <div class="flex flex-1 flex-col gap-3 p-5">
+                    <h2 class="text-lg font-semibold">@pack.Name</h2>
+                    <p class="text-sm text-ink/60">@pack.Models.Count models</p>
+                    <a href="library/@pack.Slug/download" class="mt-auto rounded-full bg-ink px-4 py-2 text-center text-sm font-semibold text-cream hover:bg-ink/85">Download .zip</a>
+                </div>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private List<PackManifest> _packs = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = HttpContextAccessor.HttpContext?.User;
+        var userId = user is null ? null : Entitlements.UserId(user);
+        if (userId is null)
+        {
+            return;
+        }
+
+        var slugs = await Entitlements.OwnedPackSlugsAsync(userId, CancellationToken.None);
+        _packs = slugs.Select(Catalog.Find).OfType<PackManifest>().ToList();
+    }
+}

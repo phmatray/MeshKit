@@ -12,5 +12,5 @@ public sealed class EntitlementReader(ApplicationDbContext db) : IEntitlementRea
         db.Entitlements.AnyAsync(e => e.UserId == userId && e.PackSlug == packSlug, cancellationToken);
 
     public async Task<IReadOnlyList<string>> OwnedPackSlugsAsync(string userId, CancellationToken cancellationToken) =>
-        await db.Entitlements.Where(e => e.UserId == userId).OrderByDescending(e => e.GrantedAt).Select(e => e.PackSlug).ToListAsync(cancellationToken);
+        await db.Entitlements.Where(e => e.UserId == userId).OrderByDescending(e => e.Id).Select(e => e.PackSlug).ToListAsync(cancellationToken);
 }

@@ -1,0 +1,18 @@
+@inject IHttpContextAccessor HttpContextAccessor
+
+@if (!string.IsNullOrEmpty(DisplayMessage))
+{
+    <div class="rounded-lg border px-4 py-3 text-sm @(IsError ? "border-red-300 bg-red-50 text-red-900" : "border-emerald-300 bg-emerald-50 text-emerald-900")" role="status" aria-live="polite">
+        @DisplayMessage
+    </div>
+}
+
+@code {
+    [Parameter] public string? Message { get; set; }
+
+    private string? DisplayMessage => Message ?? FromCookie;
+
+    private string? FromCookie => HttpContextAccessor.HttpContext?.Request.Cookies[IdentityRedirectManager.StatusCookieName];
+
+    private bool IsError => DisplayMessage?.StartsWith("Error", StringComparison.OrdinalIgnoreCase) == true;
+}

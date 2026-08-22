@@ -193,3 +193,10 @@ generated_code = true
 # ---------------------------------------------------------------------------
 [**/*{Tests,Test,Specs}/**.cs]
 dotnet_diagnostic.IDE0058.severity = none    # expression value never used (Assert/builder calls)
+
+# ---------------------------------------------------------------------------
+# EF Core migrations are generated: no style diagnostics
+# ---------------------------------------------------------------------------
+[**/Migrations/**.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none

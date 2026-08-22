@@ -1,0 +1,63 @@
+@page "/account/login"
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Log in — MeshKit</PageTitle>
+
+<div class="mx-auto max-w-md space-y-6">
+    <h1 class="text-3xl font-bold">Log in</h1>
+    <StatusMessage Message="@_error" />
+    <EditForm Model="Input!" method="post" OnValidSubmit="LoginAsync" FormName="login" class="space-y-4">
+        <DataAnnotationsValidator />
+        <div>
+            <label for="email" class="block text-sm font-medium">Email</label>
+            <InputText id="email" @bind-Value="Input!.Email" type="email" autocomplete="username" class="mt-1 w-full rounded-lg border border-ink/20 bg-white px-3 py-2" />
+            <ValidationMessage For="() => Input!.Email" class="text-sm text-red-700" />
+        </div>
+        <div>
+            <label for="password" class="block text-sm font-medium">Password</label>
+            <InputText id="password" @bind-Value="Input!.Password" type="password" autocomplete="current-password" class="mt-1 w-full rounded-lg border border-ink/20 bg-white px-3 py-2" />
+            <ValidationMessage For="() => Input!.Password" class="text-sm text-red-700" />
+        </div>
+        <label class="flex items-center gap-2 text-sm">
+            <InputCheckbox @bind-Value="Input!.RememberMe" class="rounded border-ink/30" /> Stay logged in
+        </label>
+        <button type="submit" class="w-full rounded-full bg-ink px-6 py-3 font-semibold text-cream hover:bg-ink/85">Log in</button>
+    </EditForm>
+    <p class="text-sm text-ink/70">New here? <a href="account/register?returnUrl=@ReturnUrl" class="underline">Create an account</a>.</p>
+</div>
+
+@code {
+    private string? _error;
+
+    [SupplyParameterFromForm] private InputModel? Input { get; set; }
+
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+
+    protected override void OnInitialized() => Input ??= new InputModel();
+
+    private async Task LoginAsync()
+    {
+        var result = await SignInManager.PasswordSignInAsync(Input!.Email, Input!.Password, Input!.RememberMe, lockoutOnFailure: true);
+        if (result.Succeeded)
+        {
+            RedirectManager.RedirectTo(ReturnUrl ?? "library");
+            return;
+        }
+
+        _error = result.IsLockedOut ? "Error: this account is locked out for a few minutes." : "Error: invalid email or password.";
+    }
+
+    private sealed class InputModel
+    {
+        [Required, EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [Required]
+        public string Password { get; set; } = string.Empty;
+
+        public bool RememberMe { get; set; } = true;
+    }
+}

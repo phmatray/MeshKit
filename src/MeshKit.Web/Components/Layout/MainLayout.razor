@@ -1,3 +1,40 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
 
-@Body
+<a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-ink focus:px-3 focus:py-2 focus:text-cream">Skip to content</a>
+
+<header class="border-b border-ink/10 bg-cream/90 backdrop-blur">
+    <nav class="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4" aria-label="Main">
+        <a href="/" class="flex items-center gap-2 text-xl font-bold tracking-tight">
+            <span class="inline-block h-6 w-6 rounded-md bg-coral" aria-hidden="true"></span>
+            MeshKit
+        </a>
+        <ul class="flex items-center gap-5 text-sm font-medium">
+            <li><a href="packs" class="hover:text-coral-dark">Packs</a></li>
+            <AuthorizeView>
+                <Authorized>
+                    <li><a href="library" class="hover:text-coral-dark">My library</a></li>
+                    <li>
+                        <form action="account/logout" method="post" class="inline">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="returnUrl" value="@Navigation.ToBaseRelativePath(Navigation.Uri)" />
+                            <button type="submit" class="text-ink/70 hover:text-coral-dark">Log out <span class="sr-only">(@context.User.Identity?.Name)</span></button>
+                        </form>
+                    </li>
+                </Authorized>
+                <NotAuthorized>
+                    <li><a href="account/login" class="hover:text-coral-dark">Log in</a></li>
+                    <li><a href="account/register" class="rounded-full bg-ink px-4 py-2 text-cream hover:bg-ink/85">Sign up</a></li>
+                </NotAuthorized>
+            </AuthorizeView>
+        </ul>
+    </nav>
+</header>
+
+<main id="main" class="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
+    @Body
+</main>
+
+<footer class="border-t border-ink/10 py-8 text-center text-sm text-ink/60">
+    <p>MeshKit · 3D model packs generated with Meshy · payments by Stripe</p>
+</footer>

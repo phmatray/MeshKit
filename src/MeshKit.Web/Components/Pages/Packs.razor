@@ -1,0 +1,20 @@
+@page "/packs"
+@inject ICatalogService Catalog
+
+<PageTitle>Packs — MeshKit</PageTitle>
+
+<h1 class="mb-8 text-3xl font-bold">All packs</h1>
+
+@if (Catalog.Sellable.Count == 0)
+{
+    <p class="text-ink/60">Nothing for sale yet — the first pack is probably still being generated.</p>
+}
+else
+{
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        @foreach (var pack in Catalog.Sellable)
+        {
+            <PackCard Pack="pack" />
+        }
+    </div>
+}

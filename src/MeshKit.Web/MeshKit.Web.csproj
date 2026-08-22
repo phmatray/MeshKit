@@ -3,10 +3,17 @@
   <PropertyGroup>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
     <UserSecretsId>meshkit-web-7c1f3a2e</UserSecretsId>
+    <!-- The Tailwind stylesheet and the model-viewer bundle are produced by npm (see package.json).
+         The Dockerfile builds them in a node stage and publishes with -p:SkipNpm=true. -->
+    <SkipNpm Condition="'$(SkipNpm)' == ''">false</SkipNpm>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
     <!-- Direct pin to lift the transitive SQLitePCLRaw pulled in by the EF Core SQLite provider
          past the native SQLite CVE fixed in 2.1.12+. Keep it even if it looks unused: removing a
@@ -22,5 +29,17 @@
   <ItemGroup>
     <InternalsVisibleTo Include="MeshKit.Web.Tests" />
   </ItemGroup>
+
+  <ItemGroup>
+    <NpmInput Include="package.json;package-lock.json;Styles/**/*.css;Components/**/*.razor" />
+  </ItemGroup>
+
+  <Target Name="NpmInstall" Condition="'$(SkipNpm)' != 'true' And !Exists('node_modules/.package-lock.json')" BeforeTargets="NpmBuild">
+    <Exec Command="npm ci --no-audit --no-fund" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
+  <Target Name="NpmBuild" Condition="'$(SkipNpm)' != 'true'" BeforeTargets="ResolveProjectStaticWebAssets;BeforeBuild" Inputs="@(NpmInput)" Outputs="wwwroot/css/app.css;wwwroot/js/model-viewer.min.js">
+    <Exec Command="npm run build --silent" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
 
 </Project>

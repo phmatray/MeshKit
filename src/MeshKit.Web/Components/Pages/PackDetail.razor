@@ -1,0 +1,103 @@
+@page "/packs/{Slug}"
+@inject ICatalogService Catalog
+@inject IEntitlementReader Entitlements
+@inject IHttpContextAccessor HttpContextAccessor
+
+@if (Pack is null || !Pack.IsSellable)
+{
+    <PageTitle>Pack not found — MeshKit</PageTitle>
+    <h1 class="text-3xl font-bold">Pack not found</h1>
+    <p class="mt-4"><a href="packs" class="underline">Back to all packs</a></p>
+}
+else
+{
+    <PageTitle>@Pack.Name — MeshKit</PageTitle>
+
+    <div class="grid gap-10 lg:grid-cols-[1.2fr_1fr]">
+        <section aria-label="3D preview" class="space-y-4">
+            <div class="aspect-square overflow-hidden rounded-3xl border border-ink/10 bg-white shadow-sm">
+                <model-viewer src="@CatalogEndpoints.PublicUrl(Pack.Slug, Selected.Preview!)"
+                              alt="3D preview of @Selected.Name"
+                              camera-controls auto-rotate shadow-intensity="1" touch-action="pan-y"></model-viewer>
+            </div>
+            <p class="text-sm text-ink/60">Untextured preview of <strong>@Selected.Name</strong>. The purchased files are fully textured.</p>
+            <ul class="grid grid-cols-4 gap-3 sm:grid-cols-6" aria-label="Models in this pack">
+                @foreach (var model in Pack.Models)
+                {
+                    <li>
+                        <a href="packs/@Pack.Slug?model=@model.Slug"
+                           class="block aspect-square overflow-hidden rounded-xl border-2 @(model.Slug == Selected.Slug ? "border-coral" : "border-transparent hover:border-ink/30")"
+                           aria-current="@(model.Slug == Selected.Slug ? "true" : null)"
+                           title="@model.Name">
+                            @if (model.Thumbnail is not null)
+                            {
+                                <img src="@CatalogEndpoints.PublicUrl(Pack.Slug, model.Thumbnail)" alt="@model.Name" loading="lazy" class="h-full w-full object-cover" />
+                            }
+                        </a>
+                    </li>
+                }
+            </ul>
+        </section>
+
+        <section class="space-y-6">
+            <h1 class="text-3xl font-bold">@Pack.Name</h1>
+            <p class="text-ink/75">@Pack.Description</p>
+            <dl class="grid grid-cols-2 gap-4 rounded-2xl border border-ink/10 bg-white p-5 text-sm">
+                <div><dt class="text-ink/60">Models</dt><dd class="text-lg font-semibold">@Pack.Models.Count</dd></div>
+                <div><dt class="text-ink/60">Formats</dt><dd class="text-lg font-semibold uppercase">@string.Join(" · ", Formats)</dd></div>
+                <div><dt class="text-ink/60">Textures</dt><dd class="text-lg font-semibold">PBR</dd></div>
+                <div><dt class="text-ink/60">Licence</dt><dd class="text-lg font-semibold">Royalty-free</dd></div>
+            </dl>
+
+            @if (Owned)
+            {
+                <a href="library/@Pack.Slug/download" class="block rounded-full bg-ink px-6 py-3 text-center font-semibold text-cream hover:bg-ink/85">Download pack (.zip)</a>
+                <p class="text-sm text-ink/60">You own this pack. It is also in <a href="library" class="underline">your library</a>.</p>
+            }
+            else
+            {
+                <form method="post" action="checkout/@Pack.Slug">
+                    <AntiforgeryToken />
+                    <button type="submit" class="w-full rounded-full bg-coral px-6 py-3 font-semibold text-ink hover:bg-coral-dark">
+                        Buy for @Money.Format(Pack.Price.Amount, Pack.Price.Currency)
+                    </button>
+                </form>
+                <p class="text-sm text-ink/60">Secure checkout by Stripe. Instant download after payment.</p>
+            }
+
+            <h2 class="pt-4 text-lg font-semibold">What's inside</h2>
+            <ul class="divide-y divide-ink/10 rounded-2xl border border-ink/10 bg-white">
+                @foreach (var model in Pack.Models)
+                {
+                    <li class="flex items-center justify-between px-4 py-2 text-sm">
+                        <span>@model.Name</span>
+                        <span class="text-ink/50">@model.Files.Count(f => GenerationFormats.Contains(f.Format)) files</span>
+                    </li>
+                }
+            </ul>
+        </section>
+    </div>
+}
+
+@code {
+    private static readonly HashSet<string> GenerationFormats = ["glb", "fbx", "obj", "mtl", "usdz", "stl", "3mf"];
+
+    [Parameter] public required string Slug { get; set; }
+
+    [SupplyParameterFromQuery(Name = "model")] public string? ModelSlug { get; set; }
+
+    private PackManifest? Pack { get; set; }
+
+    private ModelEntry Selected => Pack!.Models.FirstOrDefault(m => m.Slug == ModelSlug && m.Preview is not null) ?? Pack!.Models.First(m => m.Preview is not null);
+
+    private IEnumerable<string> Formats => Pack!.Models.SelectMany(m => m.Files.Select(f => f.Format)).Where(GenerationFormats.Contains).Distinct().Order();
+
+    private bool Owned { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Pack = Catalog.Find(Slug);
+        var userId = HttpContextAccessor.HttpContext?.User is { Identity.IsAuthenticated: true } user ? Entitlements.UserId(user) : null;
+        Owned = Pack is not null && userId is not null && await Entitlements.OwnsAsync(userId, Pack.Slug, CancellationToken.None);
+    }
+}

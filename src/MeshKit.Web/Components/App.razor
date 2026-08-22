@@ -1,20 +1,18 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
-    <ResourcePreloader />
-    <link rel="stylesheet" href="@Assets["app.css"]" />
-    <link rel="stylesheet" href="@Assets["MeshKit.Web.styles.css"]" />
-    <ImportMap />
+    <link rel="stylesheet" href="@Assets["css/app.css"]" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <script type="module" src="@Assets["js/model-viewer.min.js"]"></script>
     <HeadOutlet />
 </head>
 
-<body>
+<body class="min-h-screen flex flex-col">
     <Routes />
-    <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>
 
 </html>

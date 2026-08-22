@@ -1,0 +1,70 @@
+@page "/account/register"
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Create an account — MeshKit</PageTitle>
+
+<div class="mx-auto max-w-md space-y-6">
+    <h1 class="text-3xl font-bold">Create your account</h1>
+    <p class="text-ink/70">Purchases are tied to your account so you can re-download packs any time.</p>
+    <StatusMessage Message="@_error" />
+    <EditForm Model="Input!" method="post" OnValidSubmit="RegisterAsync" FormName="register" class="space-y-4">
+        <DataAnnotationsValidator />
+        <div>
+            <label for="email" class="block text-sm font-medium">Email</label>
+            <InputText id="email" @bind-Value="Input!.Email" type="email" autocomplete="username" class="mt-1 w-full rounded-lg border border-ink/20 bg-white px-3 py-2" />
+            <ValidationMessage For="() => Input!.Email" class="text-sm text-red-700" />
+        </div>
+        <div>
+            <label for="password" class="block text-sm font-medium">Password <span class="text-ink/50">(10 characters minimum)</span></label>
+            <InputText id="password" @bind-Value="Input!.Password" type="password" autocomplete="new-password" class="mt-1 w-full rounded-lg border border-ink/20 bg-white px-3 py-2" />
+            <ValidationMessage For="() => Input!.Password" class="text-sm text-red-700" />
+        </div>
+        <div>
+            <label for="confirm" class="block text-sm font-medium">Confirm password</label>
+            <InputText id="confirm" @bind-Value="Input!.ConfirmPassword" type="password" autocomplete="new-password" class="mt-1 w-full rounded-lg border border-ink/20 bg-white px-3 py-2" />
+            <ValidationMessage For="() => Input!.ConfirmPassword" class="text-sm text-red-700" />
+        </div>
+        <button type="submit" class="w-full rounded-full bg-ink px-6 py-3 font-semibold text-cream hover:bg-ink/85">Create account</button>
+    </EditForm>
+    <p class="text-sm text-ink/70">Already registered? <a href="account/login?returnUrl=@ReturnUrl" class="underline">Log in</a>.</p>
+</div>
+
+@code {
+    private string? _error;
+
+    [SupplyParameterFromForm] private InputModel? Input { get; set; }
+
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+
+    protected override void OnInitialized() => Input ??= new InputModel();
+
+    private async Task RegisterAsync()
+    {
+        var user = new ApplicationUser { UserName = Input!.Email, Email = Input!.Email };
+        var result = await UserManager.CreateAsync(user, Input!.Password);
+        if (!result.Succeeded)
+        {
+            _error = "Error: " + string.Join(" ", result.Errors.Select(e => e.Description));
+            return;
+        }
+
+        await SignInManager.SignInAsync(user, isPersistent: true);
+        RedirectManager.RedirectTo(ReturnUrl ?? "library");
+    }
+
+    private sealed class InputModel
+    {
+        [Required, EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [Required, StringLength(100, MinimumLength = 10, ErrorMessage = "The password must be at least 10 characters.")]
+        public string Password { get; set; } = string.Empty;
+
+        [Required, Compare(nameof(Password), ErrorMessage = "The passwords do not match.")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+}

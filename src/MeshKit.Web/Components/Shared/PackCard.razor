@@ -1,0 +1,25 @@
+@* One pack in a grid: first model's thumbnail, name, model count, price. *@
+<article class="group flex flex-col overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <a href="packs/@Pack.Slug" class="block aspect-[4/3] overflow-hidden bg-ink/5" aria-label="View @Pack.Name">
+        @if (Thumbnail is not null)
+        {
+            <img src="@Thumbnail" alt="" loading="lazy" class="h-full w-full object-cover transition group-hover:scale-[1.03]" />
+        }
+    </a>
+    <div class="flex flex-1 flex-col gap-2 p-5">
+        <h3 class="text-lg font-semibold"><a href="packs/@Pack.Slug" class="hover:text-coral-dark">@Pack.Name</a></h3>
+        <p class="line-clamp-2 text-sm text-ink/70">@Pack.Description</p>
+        <div class="mt-auto flex items-center justify-between pt-3">
+            <span class="text-sm text-ink/60">@Pack.Models.Count models</span>
+            <span class="rounded-full bg-ink px-3 py-1 text-sm font-semibold text-cream">@Money.Format(Pack.Price.Amount, Pack.Price.Currency)</span>
+        </div>
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public required PackManifest Pack { get; set; }
+
+    private string? Thumbnail => Pack.Models.FirstOrDefault(m => m.Thumbnail is not null)?.Thumbnail is { } t
+        ? CatalogEndpoints.PublicUrl(Pack.Slug, t)
+        : null;
+}

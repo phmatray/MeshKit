@@ -9,7 +9,9 @@ name: Generate pack
 #   MESHKIT_INGEST_TOKEN  optional — the store's MeshKit__Ingest__Token
 #
 # Re-running the workflow for the same pack resumes: the previous release asset is restored first
-# and models already generated are skipped, so a partial failure only costs the models that failed.
+# and models already generated are skipped (unless their prompt changed), so a partial failure only
+# costs the models that failed. Tick `regenerate` to redo everything, e.g. after changing polycount
+# or auto_size — the resume logic cannot see those.
 
 on:
   workflow_dispatch:
@@ -28,6 +30,11 @@ on:
         required: false
         type: number
         default: 2
+      regenerate:
+        description: "Redo every model, ignoring the previous release (needed after a generation-settings change; costs the full pack)"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -59,6 +66,7 @@ jobs:
         run: dotnet build src/MeshKit.Pipeline -c Release
 
       - name: Restore previous output (resume)
+        if: ${{ !inputs.regenerate }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -85,7 +93,8 @@ jobs:
         run: |
           set +e
           dotnet run --project src/MeshKit.Pipeline -c Release --no-build -- \
-            generate --pack "packs/${PACK}.yaml" --out catalog --concurrency "${{ inputs.concurrency }}"
+            generate --pack "packs/${PACK}.yaml" --out catalog --concurrency "${{ inputs.concurrency }}" \
+            ${{ inputs.regenerate && '--regenerate' || '' }}
           code=$?
           echo "exit_code=${code}" >> "$GITHUB_OUTPUT"
           # 1 = some models failed: still publish what exists so the next run resumes from it.

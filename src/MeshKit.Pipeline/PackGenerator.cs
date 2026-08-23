@@ -21,7 +21,7 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
         Directory.CreateDirectory(packDirectory);
         var manifestPath = Path.Combine(packDirectory, PackManifestSerializer.FileName);
 
-        var entries = SeedEntries(definition, packDirectory, manifestPath);
+        var entries = SeedEntries(definition, packDirectory, manifestPath, options.Regenerate);
         await ReconcilePreviewsAsync(definition, entries, packDirectory, cancellationToken);
         ReconcileMetadata(definition, entries, packDirectory);
         var license = _licenses.Write(definition, packDirectory, options.DefinitionDirectory, _time.GetUtcNow());
@@ -82,10 +82,14 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
         return manifest;
     }
 
-    private Dictionary<string, ModelEntry> SeedEntries(PackDefinition definition, string packDirectory, string manifestPath)
+    private Dictionary<string, ModelEntry> SeedEntries(PackDefinition definition, string packDirectory, string manifestPath, bool regenerate)
     {
         var previous = new Dictionary<string, ModelEntry>(StringComparer.Ordinal);
-        if (File.Exists(manifestPath))
+        if (regenerate)
+        {
+            logger.LogInformation("--regenerate: ignoring previously generated models");
+        }
+        else if (File.Exists(manifestPath))
         {
             try
             {
@@ -104,7 +108,8 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
         foreach (var model in definition.Models)
         {
             var fresh = ModelEntry.Pending(model);
-            if (previous.TryGetValue(model.Slug, out var old) && old.Status == ModelStatus.Succeeded && AssetsPresent(old, packDirectory))
+            if (previous.TryGetValue(model.Slug, out var old) && old.Status == ModelStatus.Succeeded && AssetsPresent(old, packDirectory)
+                && string.Equals(old.Prompt, model.Prompt, StringComparison.Ordinal))
             {
                 // Keep the generated assets, refresh the human-facing metadata from the definition.
                 entries[model.Slug] = old with { Name = model.Name, Prompt = model.Prompt, Tags = model.Tags, Category = model.Category };

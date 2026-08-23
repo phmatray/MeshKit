@@ -145,6 +145,34 @@ public sealed class PackGeneratorTests : IDisposable
     }
 
     [Fact]
+    public async Task Rerun_skips_finished_models_unless_their_prompt_changed()
+    {
+        await Generator().GenerateAsync(Definition("chest", "barrel"), PackDir, Fast, CancellationToken.None);
+        _meshy.PreviewRequests.Clear();
+
+        var changed = Definition("chest", "barrel");
+        changed = changed with { Models = changed.Models.Select(m => m.Slug == "barrel" ? m with { Prompt = "a better barrel" } : m).ToList() };
+        var manifest = await Generator().GenerateAsync(changed, PackDir, Fast, CancellationToken.None);
+
+        var request = Assert.Single(_meshy.PreviewRequests);
+        Assert.Equal("a better barrel", request.Prompt);
+        Assert.Equal("a better barrel", manifest.Models.Single(m => m.Slug == "barrel").Prompt);
+        Assert.All(manifest.Models, m => Assert.Equal(ModelStatus.Succeeded, m.Status));
+    }
+
+    [Fact]
+    public async Task Regenerate_option_ignores_finished_models()
+    {
+        await Generator().GenerateAsync(Definition("chest", "barrel"), PackDir, Fast, CancellationToken.None);
+        _meshy.PreviewRequests.Clear();
+
+        var manifest = await Generator().GenerateAsync(Definition("chest", "barrel"), PackDir, Fast with { Regenerate = true }, CancellationToken.None);
+
+        Assert.Equal(2, _meshy.PreviewRequests.Count);
+        Assert.All(manifest.Models, m => Assert.Equal(ModelStatus.Succeeded, m.Status));
+    }
+
+    [Fact]
     public async Task Textured_preview_publishes_the_refined_glb_and_refine_thumbnail()
     {
         var manifest = await Generator().GenerateAsync(DefinitionWith(GenerationSettings.PreviewTextured, "chest"), PackDir, Fast, CancellationToken.None);

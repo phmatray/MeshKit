@@ -13,7 +13,7 @@ internal static class Cli
 
         usage:
           meshkit-pipeline generate --pack packs/<slug>.yaml --out <catalog-dir>
-                                    [--concurrency 2] [--poll-seconds 15] [--timeout-minutes 40] [--dry-run]
+                                    [--concurrency 2] [--poll-seconds 15] [--timeout-minutes 40] [--dry-run] [--regenerate]
           meshkit-pipeline zip      --pack-dir <catalog-dir>/<slug> --out <file.zip>
           meshkit-pipeline publish  --zip <file.zip> --url <https://store/api/ingest> [--token <token>]
 
@@ -80,6 +80,7 @@ internal static class Cli
             PollInterval = TimeSpan.FromSeconds(Int(options, "poll-seconds", (int)GeneratorOptions.Default.PollInterval.TotalSeconds)),
             TaskTimeout = TimeSpan.FromMinutes(Int(options, "timeout-minutes", (int)GeneratorOptions.Default.TaskTimeout.TotalMinutes)),
             DefinitionDirectory = Path.GetDirectoryName(Path.GetFullPath(packFile)),
+            Regenerate = options.ContainsKey("regenerate"),
         };
 
         var packDir = Path.Combine(outDir, definition.Slug);

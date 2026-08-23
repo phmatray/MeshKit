@@ -1,0 +1,60 @@
+slug: lowpoly-nature-kit
+name: Low-Poly Nature Kit
+description: >-
+  Eight game-ready nature pieces in a clean low-poly style with PBR textures — the trees, rocks
+  and ground cover that turn an empty terrain into a forest clearing. GLB, FBX, OBJ and USDZ included.
+tags: [nature, forest, outdoor, environment, game-asset, vegetation]
+category: nature
+style: lowpoly
+license:
+  id: meshkit-standard
+price:
+  amount: 1900
+  currency: eur
+generation:
+  ai_model: latest
+  model_type: lowpoly
+  target_polycount: 4000
+  enable_pbr: true
+  texture_resolution: 2k
+  target_formats: [glb, fbx, obj, usdz]
+  preview: textured
+models:
+  - slug: oak-tree
+    name: Oak Tree
+    prompt: a broad oak tree with a thick trunk and a round faceted leaf canopy, low poly game asset, stylized
+    texture_prompt: brown bark, bright green faceted foliage
+    tags: [tree, oak, canopy, wood]
+  - slug: pine-tree
+    name: Pine Tree
+    prompt: a tall conical pine tree with layered triangular foliage tiers and a straight trunk, low poly game asset, stylized
+    texture_prompt: dark green needles, reddish-brown bark
+    tags: [tree, pine, conifer, forest]
+  - slug: mossy-boulder
+    name: Mossy Boulder
+    prompt: a large rounded boulder with angular facets and a patch of moss on top, low poly game asset, stylized
+    texture_prompt: grey granite with green moss on the upper faces
+    tags: [rock, boulder, stone, moss]
+  - slug: round-bush
+    name: Round Bush
+    prompt: a round leafy bush made of clustered faceted blobs, low poly game asset, stylized
+    tags: [bush, shrub, foliage, hedge]
+  - slug: tree-stump
+    name: Tree Stump
+    prompt: a cut tree stump with visible growth rings on top and a few roots at the base, low poly game asset, stylized
+    texture_prompt: pale cut wood with rings, rough brown bark
+    tags: [stump, wood, log, cut]
+  - slug: fallen-log
+    name: Fallen Log
+    prompt: a fallen hollow log lying on its side with broken branch stubs, low poly game asset, stylized
+    tags: [log, wood, fallen, forest-floor]
+  - slug: mushroom-cluster
+    name: Mushroom Cluster
+    prompt: a cluster of three toadstool mushrooms of different heights growing from a small patch of grass, low poly game asset, stylized
+    texture_prompt: red caps with white spots, cream stems
+    tags: [mushroom, toadstool, fungus, cluster]
+  - slug: flower-patch
+    name: Flower Patch
+    prompt: a small patch of grass with a few simple wildflowers on thin stems, low poly game asset, stylized
+    texture_prompt: green grass, yellow and white petals
+    tags: [flowers, grass, patch, meadow]

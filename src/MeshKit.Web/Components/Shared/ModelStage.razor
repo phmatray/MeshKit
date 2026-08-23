@@ -1,5 +1,6 @@
 @* The 3D viewer "stage": a deep-ink studio so a white clay mesh and a textured model both read as
-   objects, never as a blank. Poster = the Meshy render, so something meaningful paints instantly. *@
+   objects, never as a blank. Poster = the Meshy render, so something meaningful paints instantly;
+   the glb itself (≈0.4 MB after tools/optimize-previews.sh) only loads once the stage is near the viewport. *@
 <div class="relative aspect-square overflow-hidden rounded-3xl bg-ink shadow-lg ring-1 ring-ink/10">
     <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_28%,rgba(255,255,255,0.16)_0%,rgba(255,255,255,0.04)_38%,transparent_70%)]" aria-hidden="true"></div>
     <div class="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/35 to-transparent" aria-hidden="true"></div>
@@ -17,7 +18,7 @@
                   shadow-softness="0.85"
                   camera-orbit="32deg 72deg auto"
                   touch-action="pan-y"
-                  loading="eager"></model-viewer>
+                  loading="lazy"></model-viewer>
     @if (Badge is not null)
     {
         <span class="absolute left-4 top-4 rounded-full bg-cream/90 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink backdrop-blur">@Badge</span>

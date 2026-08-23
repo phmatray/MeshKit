@@ -21,6 +21,26 @@ public sealed class SeoAndPagesTests : IDisposable
         Core.Catalog.PackManifestSerializer.WriteFile(manifestPath, m with { License = new Core.Catalog.PackLicense("meshkit-standard", "MeshKit Royalty-Free Asset Licence", "public/LICENSE.txt", "private/LICENSE.txt") });
     }
 
+    [Fact]
+    public async Task Public_catalog_files_revalidate_with_etag_instead_of_resending_bytes()
+    {
+        var client = _factory.CreateClientAs(null);
+
+        var first = await client.GetAsync("/catalog/fantasy-props/public/thumbs/treasure-chest.png");
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal("public, max-age=86400, stale-while-revalidate=604800", first.Headers.CacheControl!.ToString());
+        Assert.NotNull(first.Headers.ETag);
+        Assert.NotNull(first.Content.Headers.LastModified);
+
+        using var conditional = new HttpRequestMessage(HttpMethod.Get, "/catalog/fantasy-props/public/thumbs/treasure-chest.png");
+        conditional.Headers.IfNoneMatch.Add(first.Headers.ETag!);
+        var second = await client.SendAsync(conditional);
+
+        Assert.Equal(HttpStatusCode.NotModified, second.StatusCode);
+        Assert.Equal(0, (await second.Content.ReadAsByteArrayAsync()).Length);
+    }
+
     [Theory]
     [InlineData("/search")]
     [InlineData("/search?q=chest&tag=wooden&format=fbx&sort=name")]

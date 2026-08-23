@@ -33,7 +33,7 @@ else
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h2 class="text-lg font-semibold">@Selected.Name</h2>
-                    <p class="text-sm text-ink/60">@(Selected.PreviewTextured ? "Textured — the model you download." : "Untextured preview; purchased files are fully textured.") Drag to orbit, scroll to zoom.</p>
+                    <p class="text-sm text-ink/60">@(Selected.PreviewTextured ? $"Textured preview at reduced resolution; the download carries the full {Selected.Metadata?.TextureResolution ?? "2k"} maps." : "Untextured preview; purchased files are fully textured.") Drag to orbit, scroll to zoom.</p>
                 </div>
                 @if (Selected.TagList.Count > 0 || Pack.TagList.Count > 0)
                 {

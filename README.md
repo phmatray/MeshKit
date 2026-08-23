@@ -60,6 +60,11 @@ models:
     ultra: true                                               # optional; hero pieces only
 ```
 
+The free in-browser previews are shrunk by `tools/optimize-previews.sh` (textures capped at 1k and
+re-encoded as WebP, geometry untouched — ≈0.4 MB instead of 7 MB per model). The workflow runs it after
+generation; it costs no credits, so re-running the workflow *without* `regenerate` applies it to an
+existing pack.
+
 The validator refuses a `target_polycount` without `should_remesh: true` — Meshy silently ignores the budget
 otherwise, and the first fantasy pack shipped a 22k-triangle campfire that way.
 

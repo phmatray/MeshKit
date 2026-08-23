@@ -100,6 +100,9 @@ jobs:
           # 1 = some models failed: still publish what exists so the next run resumes from it.
           if [ "${code}" -ne 0 ] && [ "${code}" -ne 1 ]; then exit "${code}"; fi
 
+      - name: Optimise previews (1k WebP, 0 credits)
+        run: tools/optimize-previews.sh "catalog/${PACK}"
+
       - name: Zip pack
         run: dotnet run --project src/MeshKit.Pipeline -c Release --no-build -- zip --pack-dir "catalog/${PACK}" --out "dist/${PACK}.zip"
 

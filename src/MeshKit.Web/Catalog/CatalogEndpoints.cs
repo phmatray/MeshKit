@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Net.Http.Headers;
 
 namespace MeshKit.Web.Catalog;
 
@@ -26,9 +27,14 @@ public static class CatalogEndpoints
                 return Results.NotFound();
             }
 
-            response.Headers.CacheControl = "public, max-age=3600";
+            // A regenerated pack keeps the same file names, so the URL cannot promise immutability. Instead:
+            // one day of free reuse, then a conditional GET that answers 304 and never re-sends the bytes.
+            var info = new FileInfo(file);
+            var lastModified = new DateTimeOffset(info.LastWriteTimeUtc);
+            var etag = new EntityTagHeaderValue($"\"{info.Length:x}-{lastModified.ToUnixTimeSeconds():x}\"");
+            response.Headers.CacheControl = "public, max-age=86400, stale-while-revalidate=604800";
             var contentType = ContentTypes.TryGetContentType(file, out var ct) ? ct : "application/octet-stream";
-            return Results.File(file, contentType, enableRangeProcessing: true);
+            return Results.File(file, contentType, lastModified: lastModified, entityTag: etag, enableRangeProcessing: true);
         });
 
         return app;

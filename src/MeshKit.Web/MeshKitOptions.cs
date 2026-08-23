@@ -8,6 +8,12 @@ public sealed class MeshKitOptions
     public string PublicBaseUrl { get; set; } = "http://localhost:5080";
 
     public SampleFollowUpOptions SampleFollowUp { get; set; } = new();
+
+    /// <summary>Accounts allowed on <c>/admin</c>, by email, comma-separated. Empty = nobody.</summary>
+    public string OwnerEmails { get; set; } = string.Empty;
+
+    public IReadOnlySet<string> OwnerEmailSet =>
+        OwnerEmails.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet(StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>

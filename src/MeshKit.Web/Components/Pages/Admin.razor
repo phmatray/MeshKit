@@ -1,0 +1,115 @@
+@page "/admin"
+@attribute [Authorize(Policy = MeshKitPolicies.Owner)]
+@inject AdminStatsReader Stats
+@using MeshKit.Web.Admin
+
+<PageTitle>Dashboard — MeshKit</PageTitle>
+<HeadContent><meta name="robots" content="noindex" /></HeadContent>
+
+<h1 class="mb-2 text-3xl font-bold">Dashboard</h1>
+<p class="mb-8 text-ink/70">What the store knows. Orders come from Stripe's webhook, samples from the free downloads.</p>
+
+@if (_stats is null)
+{
+    <p class="text-ink/60">Loading…</p>
+}
+else
+{
+    <section aria-label="Key numbers" class="mb-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        <Tile Label="Revenue" Value="@Revenue" />
+        <Tile Label="Paid orders" Value="@Format.Count(_stats.PaidOrders)" Hint="@($"{Format.Count(_stats.PendingOrders)} abandoned at checkout")" />
+        <Tile Label="Accounts" Value="@Format.Count(_stats.Accounts)" />
+        <Tile Label="Sample downloads" Value="@Format.Count(_stats.SampleDownloads)" Hint="@($"{Format.Count(_stats.SampleUsers)} people")" />
+        <Tile Label="Tried → bought" Value="@Conversion" Hint="@($"{_stats.SampleUsersWhoBought} of {_stats.SampleUsers}")" />
+        <Tile Label="Follow-up opt-ins" Value="@Format.Count(_stats.SampleOptIns)" Hint="@($"{_stats.FollowUpsSent} sent")" />
+    </section>
+
+    <section aria-labelledby="packs-heading" class="mb-10">
+        <h2 id="packs-heading" class="mb-3 text-xl font-bold">Per pack</h2>
+        <div class="overflow-x-auto rounded-2xl border border-ink/10 bg-white">
+            <table class="w-full text-sm">
+                <thead class="text-left text-ink/60"><tr><th class="px-4 py-2">Pack</th><th class="px-4 py-2 text-right">Paid</th><th class="px-4 py-2 text-right">Revenue</th><th class="px-4 py-2 text-right">Samples</th><th class="px-4 py-2 text-right">Tried → bought</th></tr></thead>
+                <tbody class="divide-y divide-ink/10">
+                    @foreach (var p in _stats.Packs)
+                    {
+                        <tr>
+                            <td class="px-4 py-2"><a href="packs/@p.Slug" class="hover:text-coral-dark">@p.Name</a></td>
+                            <td class="px-4 py-2 text-right tabular-nums">@p.Paid</td>
+                            <td class="px-4 py-2 text-right tabular-nums">@Money.Format(p.Revenue, p.Currency)</td>
+                            <td class="px-4 py-2 text-right tabular-nums">@p.Samples <span class="text-ink/50">(@p.SampleUsers people)</span></td>
+                            <td class="px-4 py-2 text-right tabular-nums">@p.SampleUsersWhoBought / @p.SampleUsers</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section aria-labelledby="orders-heading" class="mb-10">
+        <h2 id="orders-heading" class="mb-3 text-xl font-bold">Recent orders</h2>
+        @if (_stats.RecentOrders.Count == 0)
+        {
+            <p class="text-ink/60">No checkout started yet.</p>
+        }
+        else
+        {
+            <div class="overflow-x-auto rounded-2xl border border-ink/10 bg-white">
+                <table class="w-full text-sm">
+                    <thead class="text-left text-ink/60"><tr><th class="px-4 py-2">When</th><th class="px-4 py-2">Buyer</th><th class="px-4 py-2">Pack</th><th class="px-4 py-2 text-right">Amount</th><th class="px-4 py-2">Status</th></tr></thead>
+                    <tbody class="divide-y divide-ink/10">
+                        @foreach (var o in _stats.RecentOrders)
+                        {
+                            <tr>
+                                <td class="whitespace-nowrap px-4 py-2 tabular-nums">@o.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td class="px-4 py-2">@o.Email</td>
+                                <td class="px-4 py-2">@o.PackSlug</td>
+                                <td class="px-4 py-2 text-right tabular-nums">@Money.Format(o.Amount, o.Currency)</td>
+                                <td class="px-4 py-2"><span class="rounded-full px-2 py-0.5 text-xs font-semibold @(o.Status == OrderStatus.Paid ? "bg-emerald-100 text-emerald-900" : o.Status == OrderStatus.Failed ? "bg-red-100 text-red-900" : "bg-ink/10 text-ink/70")">@o.Status</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <section aria-labelledby="tried-heading">
+        <h2 id="tried-heading" class="mb-3 text-xl font-bold">Tried, not bought</h2>
+        <p class="mb-3 text-sm text-ink/60">Latest sample download per person and pack, without a purchase of that pack. The opt-in column is the follow-up email.</p>
+        @if (_stats.TriedNotBought.Count == 0)
+        {
+            <p class="text-ink/60">Nobody yet.</p>
+        }
+        else
+        {
+            <div class="overflow-x-auto rounded-2xl border border-ink/10 bg-white">
+                <table class="w-full text-sm">
+                    <thead class="text-left text-ink/60"><tr><th class="px-4 py-2">When</th><th class="px-4 py-2">Person</th><th class="px-4 py-2">Pack · model</th><th class="px-4 py-2">Follow-up</th></tr></thead>
+                    <tbody class="divide-y divide-ink/10">
+                        @foreach (var s in _stats.TriedNotBought)
+                        {
+                            <tr>
+                                <td class="whitespace-nowrap px-4 py-2 tabular-nums">@s.DownloadedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td class="px-4 py-2">@s.Email</td>
+                                <td class="px-4 py-2">@s.PackSlug · @s.ModelSlug</td>
+                                <td class="px-4 py-2 text-ink/70">@(s.OptIn ? (s.FollowUpSentAt is { } at ? $"sent {at:yyyy-MM-dd}" : "opted in, pending") : "—")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private AdminStats? _stats;
+
+    private string Revenue => _stats is null || _stats.RevenueByCurrency.Count == 0
+        ? Money.Format(0, "eur")
+        : string.Join(" + ", _stats.RevenueByCurrency.Select(kv => Money.Format(kv.Value, kv.Key)));
+
+    private string Conversion => _stats is null || _stats.SampleUsers == 0 ? "—" : $"{100 * _stats.SampleUsersWhoBought / _stats.SampleUsers}%";
+
+    protected override async Task OnInitializedAsync() => _stats = await Stats.ReadAsync(CancellationToken.None);
+}

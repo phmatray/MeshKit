@@ -12,6 +12,9 @@
             <li><a href="search" class="hover:text-coral-dark">Models</a></li>
             <AuthorizeView>
                 <Authorized>
+                    <AuthorizeView Policy="@MeshKit.Web.Admin.MeshKitPolicies.Owner" Context="owner">
+                        <li><a href="admin" class="hover:text-coral-dark">Dashboard</a></li>
+                    </AuthorizeView>
                     <li><a href="library" class="hover:text-coral-dark">My library</a></li>
                     <li>
                         <form action="account/logout" method="post" class="inline">

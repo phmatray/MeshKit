@@ -1,4 +1,5 @@
 using MeshKit.Web;
+using MeshKit.Web.Admin;
 using MeshKit.Web.Catalog;
 using MeshKit.Web.Components;
 using MeshKit.Web.Data;
@@ -25,7 +26,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("AppDb") ?? "Data Source=meshkit.db"));
 
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme).AddIdentityCookies();
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+    options.AddPolicy(MeshKitPolicies.Owner, policy => policy.RequireAuthenticatedUser().AddRequirements(new OwnerRequirement())));
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, OwnerHandler>();
+builder.Services.AddScoped<AdminStatsReader>();
 builder.Services
     .AddIdentityCore<ApplicationUser>(options =>
     {

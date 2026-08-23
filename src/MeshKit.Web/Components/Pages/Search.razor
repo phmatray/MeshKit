@@ -1,0 +1,165 @@
+@page "/search"
+@inject ISearchService SearchService
+@using MeshKit.Web.Search
+
+<PageTitle>@Title</PageTitle>
+<HeadContent>
+    <meta name="description" content="Search every 3D model in the MeshKit catalogue by name, tag, category, format and polygon count." />
+    <meta name="robots" content="@(Query.HasFilters ? "noindex,follow" : "index,follow")" />
+</HeadContent>
+
+<div class="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div>
+        <h1 class="text-3xl font-bold">@(string.IsNullOrWhiteSpace(Q) ? "All models" : $"“{Q}”")</h1>
+        <p class="mt-1 text-ink/60">@Format.Count(Result.Total) model@(Result.Total == 1 ? "" : "s")@(Query.HasFilters ? " match" : "")</p>
+    </div>
+    <SearchBox Value="@Q" Class="w-full md:w-96" />
+</div>
+
+<div class="grid gap-8 lg:grid-cols-[15rem_1fr]">
+    <aside aria-label="Filters" class="space-y-6 text-sm">
+        @if (Query.HasFilters)
+        {
+            <a href="search" class="inline-block text-coral-dark underline">Clear all filters</a>
+        }
+        <FacetGroup Title="Pack" Param="pack" Values="Result.Facets.Packs" Selected="@Pack" Query="Query" Labels="PackLabels" />
+        <FacetGroup Title="Category" Param="category" Values="Result.Facets.Categories" Selected="@Category" Query="Query" />
+        <FacetGroup Title="Style" Param="style" Values="Result.Facets.Styles" Selected="@Style" Query="Query" />
+        <FacetGroup Title="Format" Param="format" Values="Result.Facets.Formats" Selected="@FormatFilter" Query="Query" Uppercase="true" />
+        <section>
+            <h2 class="mb-2 font-semibold">Tags</h2>
+            <ul class="flex flex-wrap gap-1.5">
+                @foreach (var tag in Result.Facets.Tags)
+                {
+                    var active = SelectedTags.Contains(tag.Value);
+                    <li>
+                        <a href="@Link(Query with { Tags = active ? SelectedTags.Where(t => t != tag.Value).ToList() : [.. SelectedTags, tag.Value], Page = 1 })"
+                           class="inline-block rounded-full border px-2.5 py-0.5 text-xs @(active ? "border-coral bg-coral text-ink" : "border-ink/15 bg-white text-ink/80 hover:border-coral-dark")"
+                           aria-pressed="@(active ? "true" : "false")">@tag.Value <span class="opacity-60">@tag.Count</span></a>
+                    </li>
+                }
+            </ul>
+        </section>
+        <section>
+            <h2 class="mb-2 font-semibold">Polygon budget</h2>
+            <ul class="space-y-1">
+                @foreach (var (label, max) in new[] { ("Any", (int?)null), ("≤ 2,000 tris", 2000), ("≤ 5,000 tris", 5000), ("≤ 10,000 tris", 10000) })
+                {
+                    <li><a href="@Link(Query with { MaxTriangles = max, Page = 1 })" class="@(Query.MaxTriangles == max ? "font-semibold text-coral-dark" : "hover:text-coral-dark")">@label</a></li>
+                }
+            </ul>
+        </section>
+    </aside>
+
+    <section aria-label="Results">
+        <div class="mb-4 flex items-center justify-end gap-2 text-sm text-ink/70">
+            <span>Sort</span>
+            @foreach (var (label, sort) in new[] { ("Relevance", SearchSort.Relevance), ("Name", SearchSort.Name), ("Fewest tris", SearchSort.TrianglesAsc), ("Price", SearchSort.PriceAsc) })
+            {
+                <a href="@Link(Query with { Sort = sort, Page = 1 })" class="rounded-full px-3 py-1 @(Query.Sort == sort ? "bg-ink text-cream" : "hover:bg-ink/5")" aria-current="@(Query.Sort == sort ? "true" : null)">@label</a>
+            }
+        </div>
+
+        @if (Result.Hits.Count == 0)
+        {
+            <div class="rounded-2xl border border-dashed border-ink/20 p-10 text-center text-ink/60">
+                <p>No model matches. Try fewer words, or <a href="search" class="underline">browse everything</a>.</p>
+            </div>
+        }
+        else
+        {
+            <ul class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                @foreach (var hit in Result.Hits)
+                {
+                    <li class="flex flex-col overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                        <a href="packs/@hit.PackSlug?model=@hit.ModelSlug" class="block aspect-square bg-white">
+                            @if (hit.Thumbnail is not null)
+                            {
+                                <img src="@CatalogEndpoints.PublicUrl(hit.PackSlug, hit.Thumbnail)" alt="" loading="lazy" class="h-full w-full object-contain p-3" />
+                            }
+                        </a>
+                        <div class="flex flex-1 flex-col gap-2 p-4">
+                            <h3 class="font-semibold leading-tight"><a href="packs/@hit.PackSlug?model=@hit.ModelSlug" class="hover:text-coral-dark">@hit.Name</a></h3>
+                            <p class="text-xs text-ink/60">in <a href="packs/@hit.PackSlug" class="underline-offset-2 hover:underline">@hit.PackName</a> · @Money.Format(hit.PriceAmount, hit.PriceCurrency)</p>
+                            <p class="text-xs text-ink/60">
+                                @(hit.Triangles is { } t ? $"{Format.Count(t)} tris · " : "")<span class="uppercase">@string.Join(" · ", hit.Formats)</span>
+                            </p>
+                            <ul class="mt-auto flex flex-wrap gap-1 pt-1" aria-label="Tags">
+                                @foreach (var tag in hit.Tags.Take(4))
+                                {
+                                    <li><TagChip Tag="@tag" /></li>
+                                }
+                            </ul>
+                        </div>
+                    </li>
+                }
+            </ul>
+
+            @if (Result.PageCount > 1)
+            {
+                <nav class="mt-8 flex items-center justify-center gap-2 text-sm" aria-label="Pagination">
+                    @for (var p = 1; p <= Result.PageCount; p++)
+                    {
+                        var page = p;
+                        <a href="@Link(Query with { Page = page })" class="rounded-full px-3 py-1 @(page == Query.Page ? "bg-ink text-cream" : "hover:bg-ink/5")" aria-current="@(page == Query.Page ? "page" : null)">@(page)</a>
+                    }
+                </nav>
+            }
+        }
+    </section>
+</div>
+
+@code {
+    [SupplyParameterFromQuery] public string? Q { get; set; }
+    [SupplyParameterFromQuery(Name = "tag")] public string[]? Tag { get; set; }
+    [SupplyParameterFromQuery] public string? Category { get; set; }
+    [SupplyParameterFromQuery] public string? Style { get; set; }
+    [SupplyParameterFromQuery(Name = "format")] public string? FormatFilter { get; set; }
+    [SupplyParameterFromQuery] public string? Pack { get; set; }
+    [SupplyParameterFromQuery(Name = "maxtris")] public int? MaxTris { get; set; }
+    [SupplyParameterFromQuery] public string? Sort { get; set; }
+    [SupplyParameterFromQuery] public int? Page { get; set; }
+
+    private SearchQuery Query { get; set; } = new();
+    private SearchResult Result { get; set; } = null!;
+    private List<string> SelectedTags => (Query.Tags ?? []).ToList();
+    private Dictionary<string, string> PackLabels { get; set; } = new();
+
+    private string Title => (string.IsNullOrWhiteSpace(Q) ? "All models" : $"{Q} — search") + " — MeshKit";
+
+    protected override void OnParametersSet()
+    {
+        Query = new SearchQuery(
+            Text: Q,
+            Tags: Tag?.Where(t => !string.IsNullOrWhiteSpace(t)).ToList(),
+            Category: Blank(Category),
+            Style: Blank(Style),
+            Format: Blank(FormatFilter),
+            Pack: Blank(Pack),
+            MaxTriangles: MaxTris,
+            Sort: Enum.TryParse<SearchSort>(Sort, ignoreCase: true, out var s) ? s : SearchSort.Relevance,
+            Page: Math.Max(1, Page ?? 1));
+        Result = SearchService.Search(Query);
+        // The pack facet is keyed by display name but filters by slug; map one to the other for links.
+        PackLabels = SearchService.Search(new SearchQuery(PageSize: 500)).Hits
+            .GroupBy(h => h.PackName).ToDictionary(g => g.Key, g => g.First().PackSlug, StringComparer.Ordinal);
+    }
+
+    private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
+
+    public static string Link(SearchQuery q)
+    {
+        var parts = new List<string>();
+        void Add(string key, string? value) { if (!string.IsNullOrWhiteSpace(value)) parts.Add($"{key}={Uri.EscapeDataString(value)}"); }
+        Add("q", q.Text);
+        foreach (var t in q.Tags ?? []) Add("tag", t);
+        Add("category", q.Category);
+        Add("style", q.Style);
+        Add("format", q.Format);
+        Add("pack", q.Pack);
+        Add("maxtris", q.MaxTriangles?.ToString());
+        if (q.Sort != SearchSort.Relevance) Add("sort", q.Sort.ToString().ToLowerInvariant());
+        if (q.Page > 1) Add("page", q.Page.ToString());
+        return "search" + (parts.Count > 0 ? "?" + string.Join("&", parts) : "");
+    }
+}

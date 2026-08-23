@@ -1,0 +1,38 @@
+@page "/packs/{Slug}/licence"
+@inject ICatalogService Catalog
+
+@if (Pack is null || Pack.License is null || Text is null)
+{
+    <PageTitle>Licence not found — MeshKit</PageTitle>
+    <h1 class="text-3xl font-bold">Licence not found</h1>
+    <p class="mt-4"><a href="packs" class="underline">Back to all packs</a></p>
+}
+else
+{
+    <PageTitle>Licence — @Pack.Name — MeshKit</PageTitle>
+    <Seo Title="@($"Licence for {Pack.Name}")" Description="@($"{Pack.License.Name} — the exact LICENSE.txt shipped inside the {Pack.Name} pack.")" Path="@($"packs/{Pack.Slug}/licence")" />
+    <div class="mx-auto max-w-3xl space-y-6">
+        <p class="text-sm"><a href="packs/@Pack.Slug" class="underline">← @Pack.Name</a></p>
+        <h1 class="text-3xl font-bold">@Pack.License.Name</h1>
+        <p class="text-ink/70">This is the exact <code>LICENSE.txt</code> shipped inside the download. Read it before buying; it is the whole agreement for the files.</p>
+        <pre class="overflow-x-auto whitespace-pre-wrap rounded-2xl border border-ink/10 bg-white p-6 text-sm leading-relaxed">@Text</pre>
+    </div>
+}
+
+@code {
+    [Parameter] public required string Slug { get; set; }
+
+    private PackManifest? Pack { get; set; }
+
+    private string? Text { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Pack = Catalog.Find(Slug);
+        if (Pack?.License is { } license)
+        {
+            var path = Catalog.PublicFile(Pack.Slug, license.PublicFile["public/".Length..]);
+            Text = path is null ? null : File.ReadAllText(path);
+        }
+    }
+}

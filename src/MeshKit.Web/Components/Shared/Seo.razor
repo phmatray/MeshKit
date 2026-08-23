@@ -1,0 +1,39 @@
+@* Per-page head: canonical, description, Open Graph / Twitter cards, optional JSON-LD. *@
+@inject IOptions<MeshKitOptions> MeshKit
+@using Microsoft.Extensions.Options
+
+<HeadContent>
+    <meta name="description" content="@Description" />
+    <link rel="canonical" href="@Absolute(Path)" />
+    <meta property="og:site_name" content="MeshKit" />
+    <meta property="og:type" content="@Type" />
+    <meta property="og:title" content="@Title" />
+    <meta property="og:description" content="@Description" />
+    <meta property="og:url" content="@Absolute(Path)" />
+    <meta property="og:image" content="@Absolute(Image ?? "og-default.png")" />
+    <meta property="og:image:alt" content="@(ImageAlt ?? Title)" />
+    <meta property="og:locale" content="en_GB" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="@Title" />
+    <meta name="twitter:description" content="@Description" />
+    <meta name="twitter:image" content="@Absolute(Image ?? "og-default.png")" />
+    @if (JsonLd is not null)
+    {
+        <script type="application/ld+json">@((MarkupString)JsonLd)</script>
+    }
+</HeadContent>
+
+@code {
+    [Parameter, EditorRequired] public required string Title { get; set; }
+    [Parameter, EditorRequired] public required string Description { get; set; }
+    /// <summary>Path relative to the site root, e.g. "packs/foo".</summary>
+    [Parameter] public string Path { get; set; } = "";
+    [Parameter] public string? Image { get; set; }
+    [Parameter] public string? ImageAlt { get; set; }
+    [Parameter] public string Type { get; set; } = "website";
+    /// <summary>Pre-serialised JSON-LD (use <see cref="JsonLdBuilder"/>).</summary>
+    [Parameter] public string? JsonLd { get; set; }
+
+    private string Absolute(string relative) =>
+        relative.StartsWith("http", StringComparison.Ordinal) ? relative : $"{MeshKit.Value.PublicBaseUrl.TrimEnd('/')}/{relative.TrimStart('/')}";
+}

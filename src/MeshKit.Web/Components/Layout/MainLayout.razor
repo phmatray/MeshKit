@@ -4,13 +4,12 @@
 <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-ink focus:px-3 focus:py-2 focus:text-cream">Skip to content</a>
 
 <header class="border-b border-ink/10 bg-cream/90 backdrop-blur">
-    <nav class="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4" aria-label="Main">
-        <a href="/" class="flex items-center gap-2 text-xl font-bold tracking-tight">
-            <span class="inline-block h-6 w-6 rounded-md bg-coral" aria-hidden="true"></span>
-            MeshKit
-        </a>
-        <ul class="flex items-center gap-5 text-sm font-medium">
+    <nav class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-6 py-4" aria-label="Main">
+        <Logo />
+        <SearchBox Class="order-last w-full sm:order-none sm:ml-2 sm:w-64 lg:w-80" />
+        <ul class="ml-auto flex items-center gap-5 text-sm font-medium">
             <li><a href="packs" class="hover:text-coral-dark">Packs</a></li>
+            <li><a href="search" class="hover:text-coral-dark">Models</a></li>
             <AuthorizeView>
                 <Authorized>
                     <li><a href="library" class="hover:text-coral-dark">My library</a></li>
@@ -35,6 +34,25 @@
     @Body
 </main>
 
-<footer class="border-t border-ink/10 py-8 text-center text-sm text-ink/60">
-    <p>MeshKit · 3D model packs generated with Meshy · payments by Stripe</p>
+<footer class="border-t border-ink/10 bg-white/40">
+    <div class="mx-auto grid max-w-6xl gap-8 px-6 py-10 text-sm text-ink/70 md:grid-cols-3">
+        <div class="space-y-2">
+            <Logo Size="24" />
+            <p>Game-ready 3D model packs, generated with Meshy and curated by hand. Payments by Stripe.</p>
+        </div>
+        <nav aria-label="Legal" class="space-y-1">
+            <h2 class="font-semibold text-ink">Legal</h2>
+            <ul class="space-y-1">
+                <li><a href="legal/terms" class="hover:text-coral-dark">Terms of sale</a></li>
+                <li><a href="legal/privacy" class="hover:text-coral-dark">Privacy &amp; cookies</a></li>
+                <li><a href="legal/licence" class="hover:text-coral-dark">Asset licence</a></li>
+            </ul>
+        </nav>
+        <address class="not-italic">
+            <h2 class="font-semibold text-ink">MeshKit by Atypical Consulting</h2>
+            <p>Philippe Matray · Belgium</p>
+            <p>VAT <span class="tabular-nums">BE 0744.517.956</span></p>
+            <p><a href="mailto:philippe@atypical.consulting" class="hover:text-coral-dark">philippe@atypical.consulting</a></p>
+        </address>
+    </div>
 </footer>

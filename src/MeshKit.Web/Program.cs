@@ -7,6 +7,7 @@ using MeshKit.Web.Identity;
 using MeshKit.Web.Ingest;
 using MeshKit.Web.Payments;
 using MeshKit.Web.Search;
+using MeshKit.Web.Seo;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -88,6 +89,8 @@ app.MapIdentityEndpoints();
 app.MapPaymentEndpoints();
 app.MapDownloadEndpoints();
 app.MapIngestEndpoints();
+app.MapSearchEndpoints();
+app.MapSeoEndpoints();
 app.MapRazorComponents<App>();
 
 app.Run();

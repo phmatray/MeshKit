@@ -1,7 +1,13 @@
 @page "/"
 @inject ICatalogService Catalog
+@inject IOptions<MeshKitOptions> MeshKit
+@using Microsoft.Extensions.Options
 
-<PageTitle>MeshKit — 3D model packs</PageTitle>
+<PageTitle>MeshKit — game-ready 3D model packs</PageTitle>
+<Seo Title="MeshKit — game-ready 3D model packs"
+     Description="Curated packs of low-poly, PBR-textured 3D models in GLB, FBX, OBJ and USDZ. Preview every model in your browser, buy once, download forever."
+     Path=""
+     JsonLd="@JsonLdBuilder.Organization(MeshKit.Value.PublicBaseUrl.TrimEnd('/'))" />
 
 <section class="grid items-center gap-10 py-6 md:grid-cols-2">
     <div class="space-y-6">

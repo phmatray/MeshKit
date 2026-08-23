@@ -1,11 +1,16 @@
 # A MeshKit pack definition. The "Generate pack" GitHub workflow turns this into a sellable pack
-# through the Meshy API: one preview (free in-browser 3D preview) and one textured refine (the
-# paid asset) per model. Prompts are capped at 600 characters by Meshy.
+# through the Meshy API: one preview and one textured refine per model. Prompts are capped at
+# 600 characters by Meshy. Tags, category and style feed the store's search and facets.
 slug: lowpoly-fantasy-props
 name: Low-Poly Fantasy Props
 description: >-
   Eight game-ready fantasy props in a chunky low-poly style with PBR textures — the dungeon
   dressing every prototype needs. GLB, FBX, OBJ and USDZ included.
+tags: [fantasy, medieval, dungeon, props, game-asset]
+category: props
+style: lowpoly
+license:
+  id: meshkit-standard
 price:
   amount: 1900
   currency: eur
@@ -16,30 +21,41 @@ generation:
   enable_pbr: true
   texture_resolution: 2k
   target_formats: [glb, fbx, obj, usdz]
+  preview: textured
 models:
   - slug: treasure-chest
     name: Treasure Chest
     prompt: a closed wooden treasure chest with iron bands and a rounded lid, low poly game asset, stylized
     texture_prompt: weathered oak planks, rusted iron bands, brass lock
+    tags: [chest, loot, container, wood]
+    category: furniture
   - slug: wooden-barrel
     name: Wooden Barrel
     prompt: a wooden storage barrel with two metal hoops, low poly game asset, stylized
+    tags: [barrel, container, wood, tavern]
   - slug: stone-well
     name: Stone Well
     prompt: a round stone well with a small wooden roof and a bucket on a rope, low poly game asset, stylized
+    tags: [well, stone, village, water]
+    category: architecture
   - slug: wooden-crate
     name: Wooden Crate
     prompt: a square wooden shipping crate with reinforced corners, low poly game asset, stylized
+    tags: [crate, container, wood]
   - slug: iron-lantern
     name: Iron Lantern
     prompt: a hanging iron lantern with a glass panel and a small candle, low poly game asset, stylized
+    tags: [lantern, light, metal, candle]
   - slug: campfire
     name: Campfire
     prompt: a campfire made of logs in a ring of stones, low poly game asset, stylized, no flames
+    tags: [campfire, fire, camp, stone, wood]
   - slug: wooden-signpost
     name: Wooden Signpost
     prompt: a wooden signpost with two arrow-shaped boards pointing in different directions, low poly game asset, stylized
+    tags: [signpost, sign, wood, road]
   - slug: clay-pot
     name: Clay Pot
     prompt: a large round clay storage pot with a narrow neck, low poly game asset, stylized
     texture_prompt: terracotta with faded painted bands
+    tags: [pot, clay, pottery, container]

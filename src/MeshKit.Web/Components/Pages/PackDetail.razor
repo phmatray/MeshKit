@@ -2,6 +2,8 @@
 @inject ICatalogService Catalog
 @inject IEntitlementReader Entitlements
 @inject IHttpContextAccessor HttpContextAccessor
+@inject IOptions<MeshKitOptions> MeshKit
+@using Microsoft.Extensions.Options
 
 @if (Pack is null || !Pack.IsSellable)
 {
@@ -12,6 +14,13 @@
 else
 {
     <PageTitle>@Pack.Name — MeshKit</PageTitle>
+    <Seo Title="@($"{Pack.Name} — {Pack.Models.Count} 3D models")"
+         Description="@Pack.Description"
+         Path="@($"packs/{Pack.Slug}")"
+         Type="product"
+         Image="@OgImage"
+         ImageAlt="@($"{Selected.Name} from {Pack.Name}")"
+         JsonLd="@JsonLdBuilder.Product(MeshKit.Value.PublicBaseUrl.TrimEnd('/'), Pack, OgImage)" />
 
     <div class="grid gap-10 lg:grid-cols-[1.2fr_1fr]">
         <section aria-label="3D preview" class="space-y-4">
@@ -19,13 +28,29 @@ else
                         Poster="@(Selected.Thumbnail is null ? null : CatalogEndpoints.PublicUrl(Pack.Slug, Selected.Thumbnail))"
                         Alt="@($"3D preview of {Selected.Name}")"
                         Badge="@(Selected.PreviewTextured ? "Textured" : "Clay preview")" />
-            @if (Selected.PreviewTextured)
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h2 class="text-lg font-semibold">@Selected.Name</h2>
+                    <p class="text-sm text-ink/60">@(Selected.PreviewTextured ? "Textured — the model you download." : "Untextured preview; purchased files are fully textured.") Drag to orbit, scroll to zoom.</p>
+                </div>
+                @if (Selected.TagList.Count > 0 || Pack.TagList.Count > 0)
+                {
+                    <ul class="flex flex-wrap gap-1.5" aria-label="Tags">
+                        @foreach (var tag in Selected.TagList.Concat(Pack.TagList).Distinct())
+                        {
+                            <li><TagChip Tag="@tag" /></li>
+                        }
+                    </ul>
+                }
+            </div>
+            @if (Selected.Metadata is { } meta)
             {
-                <p class="text-sm text-ink/60"><strong>@Selected.Name</strong>, textured — the model you download. Drag to orbit, scroll to zoom.</p>
-            }
-            else
-            {
-                <p class="text-sm text-ink/60">Untextured preview of <strong>@Selected.Name</strong>. The purchased files are fully textured. Drag to orbit, scroll to zoom.</p>
+                <dl class="grid grid-cols-2 gap-x-6 gap-y-2 rounded-2xl border border-ink/10 bg-white px-5 py-4 text-sm sm:grid-cols-4" aria-label="Model specifications">
+                    <div><dt class="text-ink/50">Triangles</dt><dd class="font-semibold tabular-nums">@Format.Count(meta.Triangles)</dd></div>
+                    <div><dt class="text-ink/50">Vertices</dt><dd class="font-semibold tabular-nums">@Format.Count(meta.Vertices)</dd></div>
+                    <div><dt class="text-ink/50">Size (W×H×D)</dt><dd class="font-semibold tabular-nums">@Format.Metres(meta.Width) × @Format.Metres(meta.Height) × @Format.Metres(meta.Depth) m</dd></div>
+                    <div><dt class="text-ink/50">Textures</dt><dd class="font-semibold">@(meta.TextureMaps.Count > 0 ? $"{meta.TextureMaps.Count} maps · {meta.TextureResolution}{(meta.Pbr ? " PBR" : "")}" : "none")</dd></div>
+                </dl>
             }
             <ul class="grid grid-cols-4 gap-3 sm:grid-cols-6" aria-label="Models in this pack">
                 @foreach (var model in Pack.Models)
@@ -46,13 +71,16 @@ else
         </section>
 
         <section class="space-y-6">
-            <h1 class="text-3xl font-bold">@Pack.Name</h1>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-ink/50">@Pack.Category · @Pack.Style</p>
+                <h1 class="text-3xl font-bold">@Pack.Name</h1>
+            </div>
             <p class="text-ink/75">@Pack.Description</p>
             <dl class="grid grid-cols-2 gap-4 rounded-2xl border border-ink/10 bg-white p-5 text-sm">
                 <div><dt class="text-ink/60">Models</dt><dd class="text-lg font-semibold">@Pack.Models.Count</dd></div>
                 <div><dt class="text-ink/60">Formats</dt><dd class="text-lg font-semibold uppercase">@string.Join(" · ", Formats)</dd></div>
-                <div><dt class="text-ink/60">Textures</dt><dd class="text-lg font-semibold">PBR</dd></div>
-                <div><dt class="text-ink/60">Licence</dt><dd class="text-lg font-semibold">Royalty-free</dd></div>
+                <div><dt class="text-ink/60">Polygons</dt><dd class="text-lg font-semibold tabular-nums">@TriangleRange</dd></div>
+                <div><dt class="text-ink/60">Download</dt><dd class="text-lg font-semibold">@Format.Bytes(Pack.Models.Sum(m => m.Metadata?.TotalBytes ?? m.Files.Sum(f => f.Bytes)))</dd></div>
             </dl>
 
             @if (Owned)
@@ -68,16 +96,28 @@ else
                         Buy for @Money.Format(Pack.Price.Amount, Pack.Price.Currency)
                     </button>
                 </form>
-                <p class="text-sm text-ink/60">Secure checkout by Stripe. Instant download after payment.</p>
+                <p class="text-xs text-ink/60">
+                    Secure checkout by Stripe, instant download. By buying you accept the
+                    <a href="legal/terms" class="underline">terms of sale</a> and the
+                    <a href="packs/@Pack.Slug/licence" class="underline">@(Pack.License?.Name ?? "asset licence")</a>,
+                    and you agree to immediate delivery, which ends the 14-day withdrawal right for digital content.
+                </p>
             }
 
             <h2 class="pt-4 text-lg font-semibold">What's inside</h2>
             <ul class="divide-y divide-ink/10 rounded-2xl border border-ink/10 bg-white">
                 @foreach (var model in Pack.Models)
                 {
-                    <li class="flex items-center justify-between px-4 py-2 text-sm">
-                        <span>@model.Name</span>
-                        <span class="text-ink/50">@model.Files.Count(f => GenerationFormats.Contains(f.Format)) files</span>
+                    <li class="flex items-center justify-between gap-3 px-4 py-2 text-sm">
+                        <a href="packs/@Pack.Slug?model=@model.Slug" class="hover:text-coral-dark">@model.Name</a>
+                        <span class="text-ink/50 tabular-nums">@(model.Metadata is { } m ? $"{Format.Count(m.Triangles)} tris · " : "")@model.Files.Count(f => GenerationFormats.Contains(f.Format)) files</span>
+                    </li>
+                }
+                @if (Pack.License is not null)
+                {
+                    <li class="flex items-center justify-between gap-3 px-4 py-2 text-sm text-ink/70">
+                        <span>LICENSE.txt — @Pack.License.Name</span>
+                        <a href="packs/@Pack.Slug/licence" class="underline hover:text-coral-dark">Read</a>
                     </li>
                 }
             </ul>
@@ -97,6 +137,17 @@ else
     private ModelEntry Selected => Pack!.Models.FirstOrDefault(m => m.Slug == ModelSlug && m.Preview is not null) ?? Pack!.Models.First(m => m.Preview is not null);
 
     private IEnumerable<string> Formats => Pack!.Models.SelectMany(m => m.Files.Select(f => f.Format)).Where(GenerationFormats.Contains).Distinct().Order();
+
+    private string TriangleRange
+    {
+        get
+        {
+            var tris = Pack!.Models.Select(m => m.Metadata?.Triangles).OfType<int>().ToList();
+            return tris.Count == 0 ? "—" : tris.Min() == tris.Max() ? Format.Count(tris.Min()) : $"{Format.Count(tris.Min())}–{Format.Count(tris.Max())}";
+        }
+    }
+
+    private string? OgImage => Selected.Thumbnail is null ? null : $"{MeshKit.Value.PublicBaseUrl.TrimEnd('/')}{CatalogEndpoints.PublicUrl(Pack!.Slug, Selected.Thumbnail)}";
 
     private bool Owned { get; set; }
 

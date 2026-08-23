@@ -1,0 +1,28 @@
+@page "/legal/licence"
+@inject ICatalogService Catalog
+
+<PageTitle>Asset licence — MeshKit</PageTitle>
+<Seo Title="Asset licence" Description="The MeshKit royalty-free asset licence: what buyers may and may not do with the models." Path="legal/licence" />
+
+<article class="prose-meshkit mx-auto max-w-3xl">
+    <h1>Asset licence</h1>
+    <p class="lead">Every pack ships with its licence as <code>LICENSE.txt</code>. Most packs use the <strong>MeshKit royalty-free asset licence</strong>, summarised here; the text on each pack page is the binding one.</p>
+    <h2>You may</h2>
+    <ul>
+        <li>Use the models in unlimited personal and commercial projects — games, films, renders, AR/VR, prints, prototypes, client work.</li>
+        <li>Modify them freely and ship them embedded in your products.</li>
+    </ul>
+    <h2>You may not</h2>
+    <ul>
+        <li>Resell, share or redistribute the files themselves, modified or not.</li>
+        <li>Use them to train or evaluate machine-learning models.</li>
+        <li>Claim authorship or register them as your own designs.</li>
+    </ul>
+    <h2>Full text per pack</h2>
+    <ul>
+        @foreach (var pack in Catalog.Sellable.Where(p => p.License is not null))
+        {
+            <li><a href="packs/@pack.Slug/licence">@pack.Name</a> — @pack.License!.Name</li>
+        }
+    </ul>
+</article>

@@ -1,0 +1,5 @@
+<a href="search?tag=@Uri.EscapeDataString(Tag)" class="inline-block rounded-full border border-ink/15 bg-white px-2.5 py-0.5 text-xs font-medium text-ink/80 hover:border-coral-dark hover:text-coral-dark">@Tag</a>
+
+@code {
+    [Parameter, EditorRequired] public required string Tag { get; set; }
+}

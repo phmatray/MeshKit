@@ -1,0 +1,60 @@
+slug: lowpoly-scifi-props
+name: Low-Poly Sci-Fi Props
+description: >-
+  Eight game-ready sci-fi props in a clean low-poly style with PBR textures — the station
+  clutter, cargo and tech every space prototype needs. GLB, FBX, OBJ and USDZ included.
+tags: [sci-fi, space, station, props, game-asset, tech]
+category: props
+style: lowpoly
+license:
+  id: meshkit-standard
+price:
+  amount: 1900
+  currency: eur
+generation:
+  ai_model: latest
+  model_type: lowpoly
+  target_polycount: 4000
+  enable_pbr: true
+  texture_resolution: 2k
+  target_formats: [glb, fbx, obj, usdz]
+  preview: textured
+models:
+  - slug: cargo-crate
+    name: Cargo Crate
+    prompt: a futuristic sci-fi cargo crate with reinforced edges, handles and a small status light panel, low poly game asset, stylized
+    texture_prompt: matte grey metal with orange hazard stripes and worn edges
+    tags: [crate, cargo, container, metal]
+  - slug: energy-cell
+    name: Energy Cell
+    prompt: a cylindrical sci-fi energy cell battery with a glowing core window and metal end caps, low poly game asset, stylized
+    texture_prompt: brushed steel caps, cyan glowing core
+    tags: [battery, energy, power, glow, cylinder]
+  - slug: terminal-console
+    name: Terminal Console
+    prompt: a standing sci-fi computer terminal console with an angled screen and a keyboard panel, low poly game asset, stylized
+    tags: [terminal, console, computer, screen, tech]
+    category: furniture
+  - slug: supply-pod
+    name: Supply Pod
+    prompt: a rounded sci-fi supply drop pod with a hatch door and landing feet, low poly game asset, stylized
+    tags: [pod, supply, container, drop]
+  - slug: comms-antenna
+    name: Comms Antenna
+    prompt: a sci-fi communications antenna dish on a tripod base with cables, low poly game asset, stylized
+    tags: [antenna, dish, comms, radio, tripod]
+  - slug: scout-drone
+    name: Scout Drone
+    prompt: a small hovering sci-fi scout drone with four rotors and a single camera eye, low poly game asset, stylized
+    tags: [drone, robot, flying, camera]
+    category: vehicles
+  - slug: fuel-barrel
+    name: Fuel Barrel
+    prompt: a sci-fi fuel barrel with a valve on top and a warning label band, low poly game asset, stylized
+    texture_prompt: dark green metal with yellow warning band
+    tags: [barrel, fuel, container, hazard, metal]
+  - slug: holo-table
+    name: Holo Table
+    prompt: a round sci-fi holographic projector table with a glowing projector lens in the centre, low poly game asset, stylized
+    tags: [table, hologram, projector, tech, glow]
+    category: furniture

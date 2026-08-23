@@ -34,6 +34,15 @@ public sealed class PackCheckoutService(
             CancelUrl = $"{baseUrl}/packs/{pack.Slug}",
             IntegrationIdentifier = IntegrationIdentifier,
             Metadata = new Dictionary<string, string> { [PackSlugMetadataKey] = pack.Slug },
+            // Digital content, delivered immediately: the buyer's consent to lose the 14-day withdrawal
+            // right (EU 2011/83) is recorded on the Stripe page itself, next to the pay button.
+            CustomText = new SessionCustomTextOptions
+            {
+                Submit = new SessionCustomTextSubmitOptions
+                {
+                    Message = $"Digital download, delivered immediately. By paying you accept the terms of sale ({baseUrl}/legal/terms) and the pack licence, and agree to immediate delivery, which ends the 14-day withdrawal right.",
+                },
+            },
             LineItems =
             [
                 new SessionLineItemOptions

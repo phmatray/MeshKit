@@ -1,0 +1,38 @@
+@using MeshKit.Web.Search
+@if (Values.Count > 0)
+{
+    <section>
+        <h2 class="mb-2 font-semibold">@Title</h2>
+        <ul class="space-y-1">
+            @foreach (var value in Values)
+            {
+                var key = Labels is not null && Labels.TryGetValue(value.Value, out var slug) ? slug : value.Value;
+                var active = string.Equals(Selected, key, StringComparison.Ordinal);
+                <li>
+                    <a href="@Components.Pages.Search.Link(With(active ? null : key))" class="flex justify-between gap-2 @(active ? "font-semibold text-coral-dark" : "hover:text-coral-dark")" aria-pressed="@(active ? "true" : "false")">
+                        <span class="@(Uppercase ? "uppercase" : "")">@value.Value</span><span class="text-ink/50">@value.Count</span>
+                    </a>
+                </li>
+            }
+        </ul>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public required string Title { get; set; }
+    [Parameter, EditorRequired] public required string Param { get; set; }
+    [Parameter, EditorRequired] public required IReadOnlyList<FacetValue> Values { get; set; }
+    [Parameter] public string? Selected { get; set; }
+    [Parameter, EditorRequired] public required SearchQuery Query { get; set; }
+    [Parameter] public Dictionary<string, string>? Labels { get; set; }
+    [Parameter] public bool Uppercase { get; set; }
+
+    private SearchQuery With(string? value) => Param switch
+    {
+        "pack" => Query with { Pack = value, Page = 1 },
+        "category" => Query with { Category = value, Page = 1 },
+        "style" => Query with { Style = value, Page = 1 },
+        "format" => Query with { Format = value, Page = 1 },
+        _ => Query,
+    };
+}

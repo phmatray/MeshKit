@@ -1,0 +1,22 @@
+@* MeshKit mark: an isometric low-poly cube — three faces, coral lit face, cream top, ink shadow side —
+   the "one thing" the brand is about: a box of 3D shapes. Wordmark pairs with it; "Kit" in coral. *@
+<a href="/" class="flex items-center gap-2.5 text-ink" aria-label="MeshKit home">
+    <svg width="@Size" height="@Size" viewBox="0 0 32 32" aria-hidden="true" class="shrink-0">
+        <rect width="32" height="32" rx="8" fill="#1b1f24" />
+        <polygon points="16,5 26,10.5 16,16 6,10.5" fill="#fcfaf4" />
+        <polygon points="6,10.5 16,16 16,27 6,21.5" fill="#fd9b83" />
+        <polygon points="26,10.5 16,16 16,27 26,21.5" fill="#e27a5f" />
+        <polyline points="16,16 16,27" stroke="#1b1f24" stroke-width="0.9" opacity="0.35" />
+        <polyline points="6,10.5 16,16 26,10.5" fill="none" stroke="#1b1f24" stroke-width="0.9" opacity="0.35" />
+    </svg>
+    @if (ShowWordmark)
+    {
+        <span class="text-xl font-bold tracking-tight">Mesh<span class="text-coral-dark">Kit</span></span>
+    }
+</a>
+
+@code {
+    [Parameter] public int Size { get; set; } = 28;
+
+    [Parameter] public bool ShowWordmark { get; set; } = true;
+}

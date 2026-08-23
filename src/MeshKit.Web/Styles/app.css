@@ -35,3 +35,17 @@ model-viewer {
     --auto-rotate-delay: 1e9ms;
   }
 }
+
+/* Long-form legal pages: readable measure, quiet hierarchy. */
+.prose-meshkit { font-size: 1rem; line-height: 1.7; }
+.prose-meshkit h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 0.5rem; }
+.prose-meshkit h2 { font-size: 1.2rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.5rem; }
+.prose-meshkit p, .prose-meshkit ul, .prose-meshkit table { margin-bottom: 1rem; }
+.prose-meshkit .lead { color: rgb(27 31 36 / 0.7); font-size: 1.05rem; }
+.prose-meshkit ul { padding-left: 1.25rem; list-style: disc; }
+.prose-meshkit a { text-decoration: underline; text-underline-offset: 2px; }
+.prose-meshkit a:hover { color: var(--color-coral-dark); }
+.prose-meshkit code { background: rgb(27 31 36 / 0.06); border-radius: 4px; padding: 0.1em 0.35em; font-size: 0.9em; }
+.prose-meshkit table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.prose-meshkit th, .prose-meshkit td { text-align: left; vertical-align: top; padding: 0.5rem 0.6rem; border-bottom: 1px solid rgb(27 31 36 / 0.1); }
+.prose-meshkit th { font-weight: 600; }

@@ -1,0 +1,41 @@
+@page "/legal/privacy"
+
+<PageTitle>Privacy &amp; cookies — MeshKit</PageTitle>
+<Seo Title="Privacy & cookies" Description="What MeshKit stores about you, why, for how long, who processes it (Stripe), and how to exercise your GDPR rights." Path="legal/privacy" />
+
+<article class="prose-meshkit mx-auto max-w-3xl">
+    <h1>Privacy &amp; cookies</h1>
+    <p class="lead">Last updated 23 August 2026. Short version: we keep the minimum needed to sell you a pack and let you download it again, we use no advertising or analytics trackers, and Stripe handles payment data.</p>
+
+    <h2>Controller</h2>
+    <p>Atypical Consulting (Philippe Matray), VAT BE 0744.517.956, Belgium — <a href="mailto:philippe@atypical.consulting">philippe@atypical.consulting</a>.</p>
+
+    <h2>What we store, and why</h2>
+    <table>
+        <thead><tr><th>Data</th><th>Purpose</th><th>Legal basis</th><th>Kept</th></tr></thead>
+        <tbody>
+            <tr><td>Email address and a hashed password</td><td>Your account: log in, see and re-download purchases</td><td>Contract (art. 6(1)(b) GDPR)</td><td>Until you ask us to delete the account</td></tr>
+            <tr><td>Orders: pack bought, amount, currency, date, Stripe session and payment identifiers</td><td>Deliver the pack, keep proof of the licence you hold, accounting</td><td>Contract; legal obligation (accounting, 7 years in Belgium)</td><td>7 years after the purchase</td></tr>
+            <tr><td>Server logs (IP address, URL, time, user agent)</td><td>Security and debugging</td><td>Legitimate interest</td><td>30 days</td></tr>
+        </tbody>
+    </table>
+    <p>We do not store card numbers. Stripe collects them on its own pages and acts as an independent controller for payment processing; see <a href="https://stripe.com/privacy" rel="noopener">Stripe's privacy policy</a>. Stripe also receives your email address so it can send you a receipt.</p>
+
+    <h2>Cookies</h2>
+    <p>Only strictly necessary cookies, which need no consent banner:</p>
+    <ul>
+        <li><code>meshkit.auth</code> — keeps you logged in (expires when you log out, or after 14 days if you chose “stay logged in”).</li>
+        <li><code>.AspNetCore.Antiforgery.*</code> — protects forms against cross-site request forgery; session only.</li>
+        <li><code>meshkit.status</code> — carries a one-time status message between two pages; lives 5 seconds.</li>
+    </ul>
+    <p>No analytics, no advertising, no third-party embeds on our pages. The 3D viewer runs entirely in your browser from files we serve.</p>
+
+    <h2>Recipients and transfers</h2>
+    <p>Stripe Payments Europe Ltd (payments), the hosting provider of our Belgian-administered server, and GitHub (where generated packs are stored as release assets before publication — no personal data). Data stays in the EU except where Stripe's own transfer mechanisms apply.</p>
+
+    <h2>Your rights</h2>
+    <p>Access, rectification, erasure, restriction, portability and objection — email us and we answer within one month. Account deletion removes your email and password immediately; order records are kept as required by accounting law, pseudonymised. You may complain to the Belgian Data Protection Authority (<a href="https://www.autoriteprotectiondonnees.be" rel="noopener">autoriteprotectiondonnees.be</a>).</p>
+
+    <h2>Security</h2>
+    <p>Passwords are hashed (ASP.NET Core Identity, PBKDF2), traffic is encrypted (TLS), downloads are served only to the account that bought them, and the server is administered by the controller alone.</p>
+</article>

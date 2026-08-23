@@ -9,18 +9,17 @@
         <p class="text-lg text-ink/70">Every pack ships as GLB, FBX, OBJ and USDZ with PBR textures. Preview every model in your browser before you buy.</p>
         <a href="packs" class="inline-block rounded-full bg-coral px-6 py-3 font-semibold text-ink hover:bg-coral-dark">Browse packs</a>
     </div>
-    <div class="aspect-square overflow-hidden rounded-3xl border border-ink/10 bg-white shadow-sm">
-        @if (Featured is { } featured)
-        {
-            <model-viewer src="@CatalogEndpoints.PublicUrl(featured.Slug, featured.Preview)"
-                          alt="3D preview of @featured.Name"
-                          camera-controls auto-rotate shadow-intensity="1" touch-action="pan-y"></model-viewer>
-        }
-        else
-        {
-            <div class="flex h-full items-center justify-center text-ink/40">No pack published yet</div>
-        }
-    </div>
+    @if (Featured is { } featured)
+    {
+        <ModelStage Src="@CatalogEndpoints.PublicUrl(featured.Slug, featured.Preview)"
+                    Poster="@(featured.Thumbnail is null ? null : CatalogEndpoints.PublicUrl(featured.Slug, featured.Thumbnail))"
+                    Alt="@($"3D preview of {featured.Name}")"
+                    Badge="@featured.Name" />
+    }
+    else
+    {
+        <div class="flex aspect-square items-center justify-center rounded-3xl border border-dashed border-ink/20 text-ink/40">No pack published yet</div>
+    }
 </section>
 
 @if (Catalog.Sellable.Count > 0)
@@ -37,6 +36,6 @@
 }
 
 @code {
-    private (string Slug, string Name, string Preview)? Featured =>
-        Catalog.Sellable.SelectMany(p => p.Models.Where(m => m.Preview is not null).Select(m => (p.Slug, m.Name, m.Preview!))).FirstOrDefault() is { Slug: not null } f ? f : null;
+    private (string Slug, string Name, string Preview, string? Thumbnail)? Featured =>
+        Catalog.Sellable.SelectMany(p => p.Models.Where(m => m.Preview is not null).Select(m => (p.Slug, m.Name, m.Preview!, m.Thumbnail))).FirstOrDefault() is { Slug: not null } f ? f : null;
 }

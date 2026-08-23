@@ -14,12 +14,14 @@ public sealed class PackGeneratorTests : IDisposable
     private static readonly GeneratorOptions Fast = new(
         Concurrency: 2, PollInterval: TimeSpan.FromMilliseconds(1), TaskTimeout: TimeSpan.FromSeconds(5));
 
-    private static PackDefinition Definition(params string[] models) => new(
+    private static PackDefinition Definition(params string[] models) => DefinitionWith(GenerationSettings.PreviewClay, models);
+
+    private static PackDefinition DefinitionWith(string preview, params string[] models) => new(
         Slug: "props",
         Name: "Props",
         Description: "d",
         Price: new Price(1900, "eur"),
-        Generation: GenerationSettings.Default with { TargetFormats = ["glb", "fbx"], EnablePbr = true, ModelType = "lowpoly" },
+        Generation: GenerationSettings.Default with { TargetFormats = ["glb", "fbx"], EnablePbr = true, ModelType = "lowpoly", Preview = preview },
         Models: models.Select(m => new ModelDefinition(m, m.ToUpperInvariant(), "prompt " + m, m == "chest" ? "oak" : null)).ToList());
 
     private PackGenerator Generator() => new(_meshy, NullLogger<PackGenerator>.Instance);
@@ -37,6 +39,7 @@ public sealed class PackGeneratorTests : IDisposable
         Assert.Equal("ref-prev-prompt chest", entry.RefineTaskId);
         Assert.Equal("public/thumbs/chest.png", entry.Thumbnail);
         Assert.Equal("public/preview/chest.glb", entry.Preview);
+        Assert.False(entry.PreviewTextured);
         Assert.Equal(30, entry.ConsumedCredits);
         Assert.True(manifest.IsSellable);
 
@@ -59,6 +62,92 @@ public sealed class PackGeneratorTests : IDisposable
         Assert.True(refine.EnablePbr);
         Assert.Equal("oak", refine.TexturePrompt);
         Assert.Equal(["glb", "fbx"], refine.TargetFormats);
+    }
+
+    [Fact]
+    public async Task Textured_preview_publishes_the_refined_glb_and_refine_thumbnail()
+    {
+        var manifest = await Generator().GenerateAsync(DefinitionWith(GenerationSettings.PreviewTextured, "chest"), PackDir, Fast, CancellationToken.None);
+
+        var entry = Assert.Single(manifest.Models);
+        Assert.True(entry.PreviewTextured);
+        Assert.Equal("public/preview/chest.textured.glb", entry.Preview);
+        Assert.Equal("public/thumbs/chest.textured.png", entry.Thumbnail);
+        Assert.Equal(
+            await File.ReadAllBytesAsync(Path.Combine(PackDir, "private/chest/chest.glb")),
+            await File.ReadAllBytesAsync(Path.Combine(PackDir, "public/preview/chest.textured.glb")));
+        Assert.Contains(_meshy.Downloads, d => d.Url.ToString().Contains("ref-prev-prompt chest/thumb.png") && d.Path.EndsWith("chest.textured.png"));
+        // The clay assets are kept next to them so the pack can switch modes later without Meshy.
+        Assert.True(File.Exists(Path.Combine(PackDir, "public/preview/chest.glb")));
+        Assert.True(File.Exists(Path.Combine(PackDir, "public/thumbs/chest.png")));
+    }
+
+    [Fact]
+    public async Task Switching_an_existing_pack_to_textured_previews_costs_no_generation()
+    {
+        await Generator().GenerateAsync(DefinitionWith(GenerationSettings.PreviewClay, "chest"), PackDir, Fast, CancellationToken.None);
+        _meshy.PreviewRequests.Clear();
+        _meshy.RefineRequests.Clear();
+
+        var manifest = await Generator().GenerateAsync(DefinitionWith(GenerationSettings.PreviewTextured, "chest"), PackDir, Fast, CancellationToken.None);
+
+        Assert.Empty(_meshy.PreviewRequests);
+        Assert.Empty(_meshy.RefineRequests);
+        var entry = Assert.Single(manifest.Models);
+        Assert.True(entry.PreviewTextured);
+        Assert.Equal(ModelStatus.Succeeded, entry.Status);
+        Assert.Equal("public/preview/chest.textured.glb", entry.Preview);
+        Assert.Equal("public/thumbs/chest.textured.png", entry.Thumbnail);
+        Assert.True(File.Exists(Path.Combine(PackDir, "public/preview/chest.textured.glb")));
+        Assert.True(File.Exists(Path.Combine(PackDir, "public/thumbs/chest.textured.png")));
+        Assert.Equal(manifest, PackManifestSerializer.ReadFile(Path.Combine(PackDir, PackManifestSerializer.FileName)));
+    }
+
+    [Fact]
+    public async Task Old_pack_switching_to_textured_fetches_the_refine_thumbnail_with_a_free_get()
+    {
+        await Generator().GenerateAsync(DefinitionWith(GenerationSettings.PreviewClay, "chest"), PackDir, Fast, CancellationToken.None);
+        File.Delete(Path.Combine(PackDir, "public/thumbs/chest.textured.png"));
+        File.Delete(Path.Combine(PackDir, "public/preview/chest.textured.glb"));
+        _meshy.Downloads.Clear();
+
+        var manifest = await Generator().GenerateAsync(DefinitionWith(GenerationSettings.PreviewTextured, "chest"), PackDir, Fast, CancellationToken.None);
+
+        var entry = Assert.Single(manifest.Models);
+        Assert.Equal("public/thumbs/chest.textured.png", entry.Thumbnail);
+        Assert.Equal("public/preview/chest.textured.glb", entry.Preview);
+        var download = Assert.Single(_meshy.Downloads);
+        Assert.Contains("ref-prev-prompt chest/thumb.png", download.Url.ToString());
+    }
+
+    [Fact]
+    public async Task Switching_back_to_clay_reuses_the_kept_clay_assets()
+    {
+        await Generator().GenerateAsync(DefinitionWith(GenerationSettings.PreviewTextured, "chest"), PackDir, Fast, CancellationToken.None);
+        _meshy.PreviewRequests.Clear();
+
+        var manifest = await Generator().GenerateAsync(DefinitionWith(GenerationSettings.PreviewClay, "chest"), PackDir, Fast, CancellationToken.None);
+
+        Assert.Empty(_meshy.PreviewRequests);
+        var entry = Assert.Single(manifest.Models);
+        Assert.False(entry.PreviewTextured);
+        Assert.Equal("public/preview/chest.glb", entry.Preview);
+        Assert.Equal("public/thumbs/chest.png", entry.Thumbnail);
+    }
+
+    [Fact]
+    public async Task Textured_switch_falls_back_to_clay_thumbnail_when_refine_task_is_gone()
+    {
+        await Generator().GenerateAsync(DefinitionWith(GenerationSettings.PreviewClay, "chest"), PackDir, Fast, CancellationToken.None);
+        File.Delete(Path.Combine(PackDir, "public/thumbs/chest.textured.png")); // pack produced before textured previews existed
+        _meshy.Outcomes["ref-prev-prompt chest"] = () => throw new MeshyApiException(System.Net.HttpStatusCode.NotFound, "Task not found");
+
+        var manifest = await Generator().GenerateAsync(DefinitionWith(GenerationSettings.PreviewTextured, "chest"), PackDir, Fast, CancellationToken.None);
+
+        var entry = Assert.Single(manifest.Models);
+        Assert.True(entry.PreviewTextured);
+        Assert.Equal("public/preview/chest.textured.glb", entry.Preview);
+        Assert.Equal("public/thumbs/chest.png", entry.Thumbnail);
     }
 
     [Fact]

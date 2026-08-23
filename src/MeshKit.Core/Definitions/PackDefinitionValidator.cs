@@ -81,6 +81,11 @@ public static partial class PackDefinitionValidator
             errors.Add($"generation.texture_resolution '{gen.TextureResolution}' is unknown (expected one of {Join(GenerationSettings.KnownTextureResolutions)}).");
         }
 
+        if (!GenerationSettings.KnownPreviews.Contains(gen.Preview))
+        {
+            errors.Add($"generation.preview '{gen.Preview}' is unknown (expected one of {Join(GenerationSettings.KnownPreviews)}).");
+        }
+
         if (gen.TargetPolycount is { } polycount && polycount < 100)
         {
             errors.Add($"generation.target_polycount must be at least 100 (got {polycount}).");

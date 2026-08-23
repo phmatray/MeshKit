@@ -61,7 +61,8 @@ public sealed record ModelEntry(
     string? Thumbnail,
     string? Preview,
     IReadOnlyList<ModelFile> Files,
-    int ConsumedCredits)
+    int ConsumedCredits,
+    bool PreviewTextured = false)
 {
     public static ModelEntry Pending(ModelDefinition model) => new(
         Slug: model.Slug,
@@ -88,6 +89,7 @@ public sealed record ModelEntry(
         && Thumbnail == other.Thumbnail
         && Preview == other.Preview
         && ConsumedCredits == other.ConsumedCredits
+        && PreviewTextured == other.PreviewTextured
         && Files.SequenceEqual(other.Files);
 
     public override int GetHashCode() => HashCode.Combine(Slug, Status, Files.Count);

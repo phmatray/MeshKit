@@ -39,7 +39,8 @@ public class PackManifestTests
                     PreviewTaskId: "p1", RefineTaskId: "r1",
                     Thumbnail: "public/thumbs/chest.png", Preview: "public/preview/chest.glb",
                     Files: [new ModelFile("glb", "private/chest/chest.glb", 1234)],
-                    ConsumedCredits: 30),
+                    ConsumedCredits: 30,
+                    PreviewTextured: true),
             ],
         };
 
@@ -49,6 +50,20 @@ public class PackManifestTests
         Assert.Equal(manifest, back);
         Assert.Contains("\"status\": \"succeeded\"", json);
         Assert.Contains("\"schemaVersion\": 1", json);
+        Assert.Contains("\"previewTextured\": true", json);
+    }
+
+    [Fact]
+    public void Manifests_written_before_previewTextured_existed_still_load()
+    {
+        var json = System.Text.RegularExpressions.Regex.Replace(
+            PackManifestSerializer.Serialize(PackManifest.FromDefinition(Definition(), DateTimeOffset.UnixEpoch)),
+            ",\\s*\"previewTextured\": false", "");
+        Assert.DoesNotContain("previewTextured", json);
+
+        var back = PackManifestSerializer.Deserialize(json);
+
+        Assert.All(back.Models, m => Assert.False(m.PreviewTextured));
     }
 
     [Fact]

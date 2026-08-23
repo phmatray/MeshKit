@@ -22,21 +22,34 @@ public sealed record ModelDefinition(
 public sealed record Price(long Amount, string Currency);
 
 /// <summary>Meshy generation parameters shared by every model of the pack.</summary>
+/// <param name="Preview">
+/// What the store shows for free in the 3D viewer: <c>textured</c> (the refined model — what buyers
+/// actually judge; rippable from the viewer, which is the industry norm) or <c>clay</c> (the untextured
+/// preview-stage mesh, nothing of the paid asset leaves the server).
+/// </param>
 public sealed record GenerationSettings(
     string AiModel,
     string ModelType,
     int? TargetPolycount,
     bool EnablePbr,
     string TextureResolution,
-    IReadOnlyList<string> TargetFormats)
+    IReadOnlyList<string> TargetFormats,
+    string Preview)
 {
+    public const string PreviewTextured = "textured";
+    public const string PreviewClay = "clay";
+
     public static readonly GenerationSettings Default = new(
         AiModel: "latest",
         ModelType: "standard",
         TargetPolycount: null,
         EnablePbr: false,
         TextureResolution: "2k",
-        TargetFormats: ["glb"]);
+        TargetFormats: ["glb"],
+        Preview: PreviewTextured);
+
+    public static readonly IReadOnlySet<string> KnownPreviews =
+        new HashSet<string>(StringComparer.Ordinal) { PreviewTextured, PreviewClay };
 
     public static readonly IReadOnlySet<string> KnownAiModels =
         new HashSet<string>(StringComparer.Ordinal) { "latest", "meshy-5", "meshy-6", "meshy-7" };

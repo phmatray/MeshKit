@@ -11,6 +11,17 @@ public static class PackPaths
     public const string ThumbsDir = "public/thumbs";
     public const string PreviewDir = "public/preview";
 
+    /// <summary>Clay (untextured) preview assets keep the plain name; textured ones carry this suffix so both can coexist.</summary>
+    public const string TexturedSuffix = ".textured";
+
+    public static string ClayPreview(string modelSlug) => $"{PreviewDir}/{modelSlug}.glb";
+
+    public static string TexturedPreview(string modelSlug) => $"{PreviewDir}/{modelSlug}{TexturedSuffix}.glb";
+
+    public static string ClayThumbnail(string modelSlug) => $"{ThumbsDir}/{modelSlug}.png";
+
+    public static string TexturedThumbnail(string modelSlug) => $"{ThumbsDir}/{modelSlug}{TexturedSuffix}.png";
+
     /// <summary>
     /// True only for a forward-slash relative path under <c>public/</c> or <c>private/</c> with no
     /// <c>.</c>/<c>..</c> segments, no backslashes, no drive letters. The web app trusts nothing else.

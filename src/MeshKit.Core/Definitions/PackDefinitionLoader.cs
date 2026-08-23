@@ -48,7 +48,8 @@ public static class PackDefinitionLoader
                 TargetPolycount: gen.TargetPolycount,
                 EnablePbr: gen.EnablePbr ?? defaults.EnablePbr,
                 TextureResolution: gen.TextureResolution ?? defaults.TextureResolution,
-                TargetFormats: gen.TargetFormats is { Count: > 0 } ? gen.TargetFormats : defaults.TargetFormats);
+                TargetFormats: gen.TargetFormats is { Count: > 0 } ? gen.TargetFormats : defaults.TargetFormats,
+                Preview: gen.Preview ?? defaults.Preview);
 
         var models = (raw.Models ?? []).Select((m, i) => new ModelDefinition(
             Slug: Require(m.Slug, $"models[{i}].slug"),
@@ -97,6 +98,7 @@ public static class PackDefinitionLoader
         public bool? EnablePbr { get; set; }
         public string? TextureResolution { get; set; }
         public List<string>? TargetFormats { get; set; }
+        public string? Preview { get; set; }
     }
 
     private sealed class ModelYaml

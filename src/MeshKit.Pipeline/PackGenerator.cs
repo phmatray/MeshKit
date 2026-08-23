@@ -20,6 +20,7 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
         var manifestPath = Path.Combine(packDirectory, PackManifestSerializer.FileName);
 
         var entries = SeedEntries(definition, packDirectory, manifestPath);
+        await ReconcilePreviewsAsync(definition, entries, packDirectory, cancellationToken);
         var manifest = PackManifest.FromDefinition(definition, _time.GetUtcNow()) with { Models = entries.Values.ToList() };
         var gate = new object();
         void Persist()
@@ -113,6 +114,106 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
         return entries;
     }
 
+    /// <summary>
+    /// Brings already-succeeded entries in line with <c>generation.preview</c>. Textured: copy the refined
+    /// glb (and fetch the refine task's thumbnail — a free GET) if not on disk yet. Clay: point back at the
+    /// clay assets kept from the preview stage. No task is ever created here.
+    /// </summary>
+    private async Task ReconcilePreviewsAsync(PackDefinition definition, Dictionary<string, ModelEntry> entries, string packDirectory, CancellationToken ct)
+    {
+        var wantTextured = definition.Generation.Preview == GenerationSettings.PreviewTextured;
+        foreach (var slug in entries.Keys.ToList())
+        {
+            var entry = entries[slug];
+            if (entry.Status != ModelStatus.Succeeded || entry.PreviewTextured == wantTextured)
+            {
+                continue;
+            }
+
+            if (!wantTextured)
+            {
+                var clayPreview = PackPaths.ClayPreview(slug);
+                var clayThumb = PackPaths.ClayThumbnail(slug);
+                if (File.Exists(PackPaths.Resolve(packDirectory, clayPreview)))
+                {
+                    entries[slug] = entry with
+                    {
+                        PreviewTextured = false,
+                        Preview = clayPreview,
+                        Thumbnail = File.Exists(PackPaths.Resolve(packDirectory, clayThumb)) ? clayThumb : entry.Thumbnail,
+                    };
+                    logger.LogInformation("[{Model}] preview switched to clay", slug);
+                }
+
+                continue;
+            }
+
+            var textured = await PublishTexturedPreviewAsync(slug, entry.Files, packDirectory, ct);
+            if (textured is null)
+            {
+                logger.LogWarning("[{Model}] no refined glb on disk; keeping the clay preview", slug);
+                continue;
+            }
+
+            var thumbPath = PackPaths.TexturedThumbnail(slug);
+            string? thumb = File.Exists(PackPaths.Resolve(packDirectory, thumbPath)) ? thumbPath : null;
+            if (thumb is null && entry.RefineTaskId is not null)
+            {
+                try
+                {
+                    var task = await meshy.GetTaskAsync(entry.RefineTaskId, ct);
+                    if (task.ThumbnailUrl is not null)
+                    {
+                        thumb = await TryDownloadAsync(new Uri(task.ThumbnailUrl), thumbPath, packDirectory, ct);
+                    }
+                }
+                catch (Exception ex) when (ex is MeshyApiException or HttpRequestException)
+                {
+                    logger.LogWarning("[{Model}] refine thumbnail unavailable ({Message}); keeping the clay thumbnail", slug, ex.Message);
+                }
+            }
+
+            entries[slug] = entry with { PreviewTextured = true, Preview = textured, Thumbnail = thumb ?? entry.Thumbnail };
+            logger.LogInformation("[{Model}] preview switched to textured", slug);
+        }
+    }
+
+    /// <summary>Copies the refined glb into <c>public/preview/</c>; null when the model has no glb.</summary>
+    private static async Task<string?> PublishTexturedPreviewAsync(string slug, IReadOnlyList<ModelFile> files, string packDirectory, CancellationToken ct)
+    {
+        var glb = files.FirstOrDefault(f => f.Format == "glb");
+        if (glb is null || !File.Exists(PackPaths.Resolve(packDirectory, glb.Path)))
+        {
+            return null;
+        }
+
+        var target = PackPaths.TexturedPreview(slug);
+        var targetFull = PackPaths.Resolve(packDirectory, target);
+        Directory.CreateDirectory(Path.GetDirectoryName(targetFull)!);
+        await using (var source = File.OpenRead(PackPaths.Resolve(packDirectory, glb.Path)))
+        await using (var dest = File.Create(targetFull + ".part"))
+        {
+            await source.CopyToAsync(dest, ct);
+        }
+
+        File.Move(targetFull + ".part", targetFull, overwrite: true);
+        return target;
+    }
+
+    private async Task<string?> TryDownloadAsync(Uri url, string relativePath, string packDirectory, CancellationToken ct)
+    {
+        try
+        {
+            await meshy.DownloadAsync(url, PackPaths.Resolve(packDirectory, relativePath), ct);
+            return relativePath;
+        }
+        catch (Exception ex) when (ex is MeshyApiException or HttpRequestException or IOException)
+        {
+            logger.LogWarning("Optional download {Path} failed: {Message}", relativePath, ex.Message);
+            return null;
+        }
+    }
+
     private static bool AssetsPresent(ModelEntry entry, string packDirectory)
     {
         var paths = new[] { entry.Thumbnail, entry.Preview }.Concat(entry.Files.Select(f => f.Path));
@@ -176,8 +277,15 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
                 throw new InvalidOperationException($"Refine task {refineId} succeeded without any model url.");
             }
 
+            // Always keep the textured preview assets next to the clay ones: switching modes later is then
+            // a manifest change, never a regeneration.
+            var texturedPreview = await PublishTexturedPreviewAsync(model.Slug, files, packDirectory, ct);
+            var texturedThumb = refined.ThumbnailUrl is null
+                ? null
+                : await TryDownloadAsync(new Uri(refined.ThumbnailUrl), PackPaths.TexturedThumbnail(model.Slug), packDirectory, ct);
+
             logger.LogInformation("[{Model}] done: {Files} file(s), {Credits} credits", model.Slug, files.Count, preview.ConsumedCredits + refined.ConsumedCredits);
-            return entry with
+            var done = entry with
             {
                 Status = ModelStatus.Succeeded,
                 Error = null,
@@ -185,7 +293,11 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
                 Preview = previewPath,
                 Files = files,
                 ConsumedCredits = preview.ConsumedCredits + refined.ConsumedCredits,
+                PreviewTextured = false,
             };
+            return pack.Generation.Preview == GenerationSettings.PreviewTextured && texturedPreview is not null
+                ? done with { PreviewTextured = true, Preview = texturedPreview, Thumbnail = texturedThumb ?? thumbnailPath }
+                : done;
         }
         catch (MeshyOutOfCreditsException)
         {

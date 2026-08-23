@@ -15,18 +15,24 @@ else
 
     <div class="grid gap-10 lg:grid-cols-[1.2fr_1fr]">
         <section aria-label="3D preview" class="space-y-4">
-            <div class="aspect-square overflow-hidden rounded-3xl border border-ink/10 bg-white shadow-sm">
-                <model-viewer src="@CatalogEndpoints.PublicUrl(Pack.Slug, Selected.Preview!)"
-                              alt="3D preview of @Selected.Name"
-                              camera-controls auto-rotate shadow-intensity="1" touch-action="pan-y"></model-viewer>
-            </div>
-            <p class="text-sm text-ink/60">Untextured preview of <strong>@Selected.Name</strong>. The purchased files are fully textured.</p>
+            <ModelStage Src="@CatalogEndpoints.PublicUrl(Pack.Slug, Selected.Preview!)"
+                        Poster="@(Selected.Thumbnail is null ? null : CatalogEndpoints.PublicUrl(Pack.Slug, Selected.Thumbnail))"
+                        Alt="@($"3D preview of {Selected.Name}")"
+                        Badge="@(Selected.PreviewTextured ? "Textured" : "Clay preview")" />
+            @if (Selected.PreviewTextured)
+            {
+                <p class="text-sm text-ink/60"><strong>@Selected.Name</strong>, textured — the model you download. Drag to orbit, scroll to zoom.</p>
+            }
+            else
+            {
+                <p class="text-sm text-ink/60">Untextured preview of <strong>@Selected.Name</strong>. The purchased files are fully textured. Drag to orbit, scroll to zoom.</p>
+            }
             <ul class="grid grid-cols-4 gap-3 sm:grid-cols-6" aria-label="Models in this pack">
                 @foreach (var model in Pack.Models)
                 {
                     <li>
                         <a href="packs/@Pack.Slug?model=@model.Slug"
-                           class="block aspect-square overflow-hidden rounded-xl border-2 @(model.Slug == Selected.Slug ? "border-coral" : "border-transparent hover:border-ink/30")"
+                           class="block aspect-square overflow-hidden rounded-xl border-2 bg-white @(model.Slug == Selected.Slug ? "border-coral" : "border-transparent hover:border-ink/30")"
                            aria-current="@(model.Slug == Selected.Slug ? "true" : null)"
                            title="@model.Name">
                             @if (model.Thumbnail is not null)

@@ -18,6 +18,7 @@ public class PackDefinitionTests
           enable_pbr: true
           texture_resolution: 2k
           target_formats: [glb, fbx, obj, usdz]
+          preview: clay
         models:
           - slug: treasure-chest
             name: Treasure Chest
@@ -42,6 +43,7 @@ public class PackDefinitionTests
         Assert.True(pack.Generation.EnablePbr);
         Assert.Equal("2k", pack.Generation.TextureResolution);
         Assert.Equal(["glb", "fbx", "obj", "usdz"], pack.Generation.TargetFormats);
+        Assert.Equal("clay", pack.Generation.Preview);
         Assert.Equal(2, pack.Models.Count);
         Assert.Equal("weathered oak", pack.Models[0].TexturePrompt);
         Assert.Null(pack.Models[1].TexturePrompt);
@@ -62,6 +64,14 @@ public class PackDefinitionTests
         Assert.Equal("standard", pack.Generation.ModelType);
         Assert.Equal(["glb"], pack.Generation.TargetFormats);
         Assert.False(pack.Generation.EnablePbr);
+        Assert.Equal("textured", pack.Generation.Preview);
+    }
+
+    [Fact]
+    public void Unknown_preview_mode_is_reported()
+    {
+        var pack = Valid() with { Generation = Valid().Generation with { Preview = "wireframe" } };
+        Assert.Contains(PackDefinitionValidator.Validate(pack), e => e.Contains("generation.preview"));
     }
 
     [Fact]

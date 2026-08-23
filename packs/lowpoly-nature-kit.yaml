@@ -40,7 +40,7 @@ models:
     tags: [tree, pine, conifer, forest]
   - slug: mossy-boulder
     name: Mossy Boulder
-    prompt: a large rounded boulder with angular facets and a patch of moss on top, low poly game asset, stylized
+    prompt: a large rounded boulder with angular facets and a patch of moss on top, about 2 m across, low poly game asset, stylized
     texture_prompt: grey granite with green moss on the upper faces
     tags: [rock, boulder, stone, moss]
   - slug: round-bush

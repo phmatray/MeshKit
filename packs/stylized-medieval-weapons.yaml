@@ -30,39 +30,39 @@ models:
   - slug: longsword
     name: Longsword
     ultra: true
-    prompt: a medieval longsword with a straight double-edged blade, a cross guard and a leather-wrapped grip, stylized game asset, chunky proportions
+    prompt: a medieval longsword with a straight double-edged blade, a cross guard and a leather-wrapped grip, about 1.1 m long, stylized game asset, chunky proportions
     texture_prompt: polished steel blade, dark brown leather grip, brass pommel
     tags: [sword, blade, steel, knight]
   - slug: battle-axe
     name: Battle Axe
-    prompt: a one-handed medieval battle axe with a curved steel head on a wooden haft, stylized game asset, chunky proportions
+    prompt: a one-handed medieval battle axe with a curved steel head on a wooden haft, about 70 cm long, stylized game asset, chunky proportions
     texture_prompt: weathered steel head, dark oak haft with leather strapping
     tags: [axe, blade, wood, warrior]
   - slug: war-hammer
     name: War Hammer
-    prompt: a medieval war hammer with a square steel head and a back spike on a long wooden handle, stylized game asset, chunky proportions
+    prompt: a medieval war hammer with a square steel head and a back spike on a long wooden handle, about 90 cm long, stylized game asset, chunky proportions
     tags: [hammer, blunt, steel, knight]
   - slug: round-shield
     name: Round Shield
-    prompt: a round wooden shield with a central iron boss and riveted metal rim, stylized game asset, chunky proportions
+    prompt: a round wooden shield with a central iron boss and riveted metal rim, about 80 cm across, stylized game asset, chunky proportions
     texture_prompt: painted wooden planks with a red and cream spiral pattern, iron boss
     tags: [shield, round, wood, viking]
   - slug: kite-shield
     name: Kite Shield
-    prompt: a tall medieval kite shield with a pointed bottom and a painted heraldic lion emblem, stylized game asset, chunky proportions
+    prompt: a tall medieval kite shield with a pointed bottom and a painted heraldic lion emblem, about 1.1 m tall, stylized game asset, chunky proportions
     texture_prompt: blue field with a gold lion emblem, steel rim
     tags: [shield, kite, heraldry, knight]
   - slug: recurve-bow
     name: Recurve Bow
-    prompt: a wooden recurve bow with a wrapped grip and a taut string, stylized game asset, chunky proportions
+    prompt: a wooden recurve bow with a wrapped grip and a taut string, about 1.5 m tall, stylized game asset, chunky proportions
     tags: [bow, ranged, archer, wood]
   - slug: dagger
     name: Dagger
-    prompt: a short medieval dagger with a leaf-shaped blade and a small crossguard, stylized game asset, chunky proportions
+    prompt: a short medieval dagger with a leaf-shaped blade and a small crossguard, about 35 cm long, stylized game asset, chunky proportions
     texture_prompt: bright steel blade, black leather grip with a red gem in the pommel
     tags: [dagger, knife, blade, rogue]
   - slug: wooden-staff
     name: Wooden Staff
-    prompt: a gnarled wooden wizard staff topped with a crystal held by twisted branches, stylized game asset, chunky proportions
+    prompt: a gnarled wooden wizard staff topped with a crystal held by twisted branches, about 1.8 m tall, stylized game asset, chunky proportions
     texture_prompt: dark twisted wood, glowing purple crystal
     tags: [staff, magic, wizard, crystal, wood]

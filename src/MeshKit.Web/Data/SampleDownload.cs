@@ -15,4 +15,10 @@ public sealed class SampleDownload
     public required string ModelSlug { get; set; }
 
     public DateTimeOffset DownloadedAt { get; set; }
+
+    /// <summary>Ticked "email me a discount once I've tried it" at download time. Explicit consent, never inferred.</summary>
+    public bool FollowUpOptIn { get; set; }
+
+    /// <summary>When the follow-up went out (or was decided against, e.g. the pack was bought first). One per user and pack.</summary>
+    public DateTimeOffset? FollowUpSentAt { get; set; }
 }

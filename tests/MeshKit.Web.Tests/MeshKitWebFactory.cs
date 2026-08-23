@@ -42,8 +42,16 @@ public sealed class MeshKitWebFactory : WebApplicationFactory<Program>
 
     public string CatalogPath => Path.Combine(Root.FullName, "catalog");
 
+    /// <summary>Extra configuration applied before the host builds (e.g. the sample follow-up promotion code).</summary>
+    public Dictionary<string, string?> Settings { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        foreach (var (key, value) in Settings)
+        {
+            builder.UseSetting(key, value);
+        }
+
         Directory.CreateDirectory(CatalogPath);
         builder.UseEnvironment("Production");
         builder.UseSetting("ConnectionStrings:AppDb", $"Data Source={Path.Combine(Root.FullName, "test.db")}");

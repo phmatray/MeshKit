@@ -30,6 +30,31 @@ public static class EmailTemplates
         return new EmailMessage(to, null, subject, html, Footer(text));
     }
 
+    public static EmailMessage SampleFollowUp(string to, string packName, string modelName, string baseUrl, string packSlug, string promotionCode, string discountLabel)
+    {
+        var packUrl = $"{baseUrl}/packs/{packSlug}";
+        var subject = $"Did the {modelName} hold up? {discountLabel} on {packName}";
+        var html = Layout(subject, $"""
+            <p style="margin:0 0 16px">A couple of days ago you downloaded the free <strong>{E(modelName)}</strong> from <strong>{E(packName)}</strong>. If it held up in your engine — topology, UVs, scale, pivot — the other models in the pack were made the same way.</p>
+            <p style="margin:0 0 16px">As promised, here is <strong>{E(discountLabel)}</strong> on the full pack. Enter the code on the Stripe checkout page:</p>
+            <p style="margin:0 0 16px;font-size:22px;letter-spacing:2px;font-family:monospace"><strong>{E(promotionCode)}</strong></p>
+            {Button(packUrl, $"Get {E(packName)}")}
+            <p style="margin:16px 0 0;color:#555">You asked for this one email when you downloaded the sample; there is no list and nothing else will follow.</p>
+            """);
+        var text = $"""
+            A couple of days ago you downloaded the free {modelName} from {packName}. If it held up in your engine, the other models in the pack were made the same way.
+
+            As promised, here is {discountLabel} on the full pack. Enter this code on the Stripe checkout page:
+
+                {promotionCode}
+
+            Get the pack: {packUrl}
+
+            You asked for this one email when you downloaded the sample; there is no list and nothing else will follow.
+            """;
+        return new EmailMessage(to, null, subject, html, Footer(text));
+    }
+
     public static EmailMessage PasswordReset(string to, string resetUrl)
     {
         const string subject = "Reset your MeshKit password";

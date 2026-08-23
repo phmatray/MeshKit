@@ -66,7 +66,9 @@ public sealed class PackImporter(ICatalogService catalog, ILogger<PackImporter> 
 
             var missing = manifest.Models
                 .Where(m => m.Status == ModelStatus.Succeeded)
-                .SelectMany(m => new[] { m.Thumbnail, m.Preview }.Concat(m.Files.Select(f => f.Path)))
+                .SelectMany(m => new[] { m.Thumbnail, m.Preview }
+                    .Concat(m.VariantList.SelectMany(v => new[] { v.Thumbnail, v.Preview }))
+                    .Concat(m.AllFiles.Select(f => f.Path)))
                 .OfType<string>()
                 .Where(p => !File.Exists(PackPaths.Resolve(extracted, p)))
                 .ToList();

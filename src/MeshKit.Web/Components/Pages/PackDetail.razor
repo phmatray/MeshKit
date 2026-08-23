@@ -26,13 +26,40 @@ else
        the contents list; from lg up the viewer spans both rows on the left and the two others stack on the right. *@
     <div class="grid gap-x-10 gap-y-8 lg:grid-cols-[1.2fr_1fr] lg:grid-rows-[auto_1fr]">
         <section aria-label="3D preview" class="space-y-4 lg:col-start-1 lg:row-span-2 lg:row-start-1">
-            <ModelStage Src="@CatalogEndpoints.PublicUrl(Pack.Slug, Selected.Preview!)"
-                        Poster="@(Selected.Thumbnail is null ? null : CatalogEndpoints.PublicUrl(Pack.Slug, Selected.Thumbnail))"
-                        Alt="@($"3D preview of {Selected.Name}")"
-                        Badge="@(Selected.PreviewTextured ? "Textured" : "Clay preview")" />
+            <ModelStage Src="@CatalogEndpoints.PublicUrl(Pack.Slug, SelectedVariant?.Preview ?? Selected.Preview!)"
+                        Poster="@((SelectedVariant?.Thumbnail ?? Selected.Thumbnail) is { } poster ? CatalogEndpoints.PublicUrl(Pack.Slug, poster) : null)"
+                        Alt="@($"3D preview of {Selected.Name}{(SelectedVariant is null ? "" : $" ({SelectedVariant.Name})")}")"
+                        Badge="@(SelectedVariant is not null ? SelectedVariant.Name : Selected.PreviewTextured ? "Textured" : "Clay preview")" />
+            @if (Selected.VariantList.Count > 0)
+            {
+                <ul class="flex flex-wrap items-center gap-2" aria-label="Texture variants">
+                    <li class="text-sm text-ink/60">Skins:</li>
+                    <li>
+                        <a href="packs/@Pack.Slug?model=@Selected.Slug" class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm @(SelectedVariant is null ? "border-coral bg-coral/20 font-semibold" : "border-ink/15 bg-white hover:border-coral-dark")" aria-current="@(SelectedVariant is null ? "true" : null)">
+                            @if (Selected.Thumbnail is not null)
+                            {
+                                <img src="@CatalogEndpoints.PublicUrl(Pack.Slug, Selected.Thumbnail)" alt="" class="h-6 w-6 rounded-full object-cover" />
+                            }
+                            Default
+                        </a>
+                    </li>
+                    @foreach (var v in Selected.VariantList.Where(v => v.Preview is not null))
+                    {
+                        <li>
+                            <a href="packs/@Pack.Slug?model=@Selected.Slug&variant=@v.Slug" class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm @(SelectedVariant?.Slug == v.Slug ? "border-coral bg-coral/20 font-semibold" : "border-ink/15 bg-white hover:border-coral-dark")" aria-current="@(SelectedVariant?.Slug == v.Slug ? "true" : null)">
+                                @if (v.Thumbnail is not null)
+                                {
+                                    <img src="@CatalogEndpoints.PublicUrl(Pack.Slug, v.Thumbnail)" alt="" class="h-6 w-6 rounded-full object-cover" />
+                                }
+                                @v.Name
+                            </a>
+                        </li>
+                    }
+                </ul>
+            }
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <h2 class="text-lg font-semibold">@Selected.Name</h2>
+                    <h2 class="text-lg font-semibold">@Selected.Name@(SelectedVariant is null ? "" : $" · {SelectedVariant.Name}")</h2>
                     <p class="text-sm text-ink/60">@(Selected.PreviewTextured ? $"Textured preview at reduced resolution; the download carries the full {Selected.Metadata?.TextureResolution ?? "2k"} maps." : "Untextured preview; purchased files are fully textured.") Drag to orbit, scroll to zoom.</p>
                 </div>
                 @if (Selected.TagList.Count > 0 || Pack.TagList.Count > 0)
@@ -94,6 +121,10 @@ else
                 @if (LodCount > 0)
                 {
                     <div class="col-span-2"><dt class="text-ink/60">Levels of detail</dt><dd class="text-lg font-semibold">Full model + @Format.Plural(LodCount, "LOD") per model</dd></div>
+                }
+                @if (VariantCount > 0)
+                {
+                    <div class="col-span-2"><dt class="text-ink/60">Texture variants</dt><dd class="text-lg font-semibold">@(VariantCount + 1) skins per model <span class="text-sm font-normal text-ink/60">(default + @string.Join(", ", Pack.Models[0].VariantList.Select(v => v.Name)))</span></dd></div>
                 }
             </dl>
 
@@ -171,7 +202,7 @@ else
                                 <span class="rounded-full bg-coral px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink">Free</span>
                             }
                         </span>
-                        <span class="text-ink/50 tabular-nums">@(model.Metadata is { } m ? $"{Format.Count(m.Triangles)} tris · " : "")@model.Files.Count(f => GenerationFormats.Contains(f.Format)) files@(model.LodList.Count > 0 ? $" · {Format.Plural(model.LodList.Count, "LOD")}" : "")</span>
+                        <span class="text-ink/50 tabular-nums">@(model.Metadata is { } m ? $"{Format.Count(m.Triangles)} tris · " : "")@model.Files.Count(f => GenerationFormats.Contains(f.Format)) files@(model.LodList.Count > 0 ? $" · {Format.Plural(model.LodList.Count, "LOD")}" : "")@(model.VariantList.Count > 0 ? $" · {Format.Plural(model.VariantList.Count + 1, "skin")}" : "")</span>
                     </li>
                 }
                 @if (Pack.License is not null)
@@ -196,6 +227,13 @@ else
     [Parameter] public required string Slug { get; set; }
 
     [SupplyParameterFromQuery(Name = "model")] public string? ModelSlug { get; set; }
+
+    [SupplyParameterFromQuery(Name = "variant")] public string? VariantSlug { get; set; }
+
+    private ModelVariant? SelectedVariant => VariantSlug is null ? null : Selected.VariantList.FirstOrDefault(v => v.Slug == VariantSlug && v.Preview is not null);
+
+    /// <summary>Variants per model when every model has the same number, else the minimum.</summary>
+    private int VariantCount => Pack!.Models.Count == 0 ? 0 : Pack.Models.Min(m => m.VariantList.Count);
 
     private PackManifest? Pack { get; set; }
 

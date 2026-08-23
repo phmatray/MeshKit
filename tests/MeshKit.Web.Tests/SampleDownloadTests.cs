@@ -24,8 +24,17 @@ public sealed class SampleDownloadTests : IDisposable
         // the lantern ships one LOD
         Directory.CreateDirectory(Path.Combine(dir, "private", "iron-lantern", "lod1"));
         File.WriteAllText(Path.Combine(dir, "private", "iron-lantern", "lod1", "iron-lantern_lod1.glb"), "lod");
+        // ...and one texture variant with its public preview and swatch
+        Directory.CreateDirectory(Path.Combine(dir, "private", "iron-lantern", "variants", "snow"));
+        File.WriteAllText(Path.Combine(dir, "private", "iron-lantern", "variants", "snow", "iron-lantern_snow.glb"), "snow");
+        File.WriteAllText(Path.Combine(dir, "public", "preview", "iron-lantern.snow.glb"), "snow-preview");
+        File.WriteAllText(Path.Combine(dir, "public", "thumbs", "iron-lantern.snow.png"), "png");
         var models = m.Models.Select(e => e.Slug == "iron-lantern"
-            ? e with { Lods = [new ModelLod(1, 800, "lod-1", [new ModelFile("glb", "private/iron-lantern/lod1/iron-lantern_lod1.glb", 3)], 790, 5)] }
+            ? e with
+            {
+                Lods = [new ModelLod(1, 800, "lod-1", [new ModelFile("glb", "private/iron-lantern/lod1/iron-lantern_lod1.glb", 3)], 790, 5)],
+                Variants = [new ModelVariant("snow", "Snow", "rt-1", [new ModelFile("glb", "private/iron-lantern/variants/snow/iron-lantern_snow.glb", 4)], "public/thumbs/iron-lantern.snow.png", "public/preview/iron-lantern.snow.glb", 10)],
+            }
             : e).ToList();
         PackManifestSerializer.WriteFile(manifestPath, m with { Sample = sample, Models = models });
     }
@@ -64,7 +73,7 @@ public sealed class SampleDownloadTests : IDisposable
         Assert.Equal("fantasy-props-sample-iron-lantern.zip", response.Content.Headers.ContentDisposition!.FileName!.Trim('"'));
         using var zip = new ZipArchive(await response.Content.ReadAsStreamAsync());
         Assert.Equal(
-            ["fantasy-props-sample/LICENSE.txt", "fantasy-props-sample/iron-lantern/iron-lantern.glb", "fantasy-props-sample/iron-lantern/iron-lantern.obj", "fantasy-props-sample/iron-lantern/lod1/iron-lantern_lod1.glb"],
+            ["fantasy-props-sample/LICENSE.txt", "fantasy-props-sample/iron-lantern/iron-lantern.glb", "fantasy-props-sample/iron-lantern/iron-lantern.obj", "fantasy-props-sample/iron-lantern/lod1/iron-lantern_lod1.glb", "fantasy-props-sample/iron-lantern/variants/snow/iron-lantern_snow.glb"],
             zip.Entries.Select(e => e.FullName).Order(StringComparer.Ordinal));
 
         var recorded = _factory.WithDb(db => db.SampleDownloads.ToList());
@@ -88,6 +97,13 @@ public sealed class SampleDownloadTests : IDisposable
         var lantern = await _factory.CreateClientAs(null).GetStringAsync("/packs/fantasy-props?model=iron-lantern");
         Assert.Contains("2,600 → 790 tris", lantern);                   // LOD chain on the selected model
         Assert.Contains("1 LOD", lantern);                              // in "What's inside"
+        Assert.Contains("Skins:", lantern);
+        Assert.Contains("2 skins", lantern);
+        Assert.Contains("/catalog/fantasy-props/public/preview/iron-lantern.glb", lantern);
+
+        var snow = await _factory.CreateClientAs(null).GetStringAsync("/packs/fantasy-props?model=iron-lantern&variant=snow");
+        Assert.Contains("/catalog/fantasy-props/public/preview/iron-lantern.snow.glb", snow);   // the viewer shows the skin
+        Assert.Contains("Iron Lantern · Snow", snow);
     }
 
     [Fact]

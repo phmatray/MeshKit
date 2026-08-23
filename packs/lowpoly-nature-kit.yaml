@@ -27,6 +27,13 @@ generation:
   texture_resolution: 2k
   target_formats: [glb, fbx, obj, usdz]
   preview: textured
+variants:                        # Meshy Retexture of every model, 10 credits per model and variant; shown as skins in the viewer
+  - slug: autumn
+    name: Autumn
+    prompt: autumn colours, orange red and yellow leaves, dry brown grass, warm tones
+  - slug: winter
+    name: Winter
+    prompt: covered in snow, bare frosty branches, pale icy colours
 models:
   - slug: oak-tree
     name: Oak Tree

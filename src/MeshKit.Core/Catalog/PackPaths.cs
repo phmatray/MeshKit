@@ -22,6 +22,10 @@ public static class PackPaths
 
     public static string TexturedThumbnail(string modelSlug) => $"{ThumbsDir}/{modelSlug}{TexturedSuffix}.png";
 
+    public static string VariantPreview(string modelSlug, string variantSlug) => $"{PreviewDir}/{modelSlug}.{variantSlug}.glb";
+
+    public static string VariantThumbnail(string modelSlug, string variantSlug) => $"{ThumbsDir}/{modelSlug}.{variantSlug}.png";
+
     /// <summary>
     /// True only for a forward-slash relative path under <c>public/</c> or <c>private/</c> with no
     /// <c>.</c>/<c>..</c> segments, no backslashes, no drive letters. The web app trusts nothing else.
@@ -48,7 +52,8 @@ public static class PackPaths
         var offenders = new List<string>();
         foreach (var model in manifest.Models)
         {
-            foreach (var candidate in new[] { model.Thumbnail, model.Preview }.Concat(model.Files.Select(f => f.Path)))
+            var publicExtras = model.VariantList.SelectMany(v => new[] { v.Thumbnail, v.Preview });
+            foreach (var candidate in new[] { model.Thumbnail, model.Preview }.Concat(publicExtras).Concat(model.AllFiles.Select(f => f.Path)))
             {
                 if (candidate is not null && !IsSafeRelative(candidate))
                 {

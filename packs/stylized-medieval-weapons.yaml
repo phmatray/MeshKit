@@ -30,6 +30,13 @@ generation:
   texture_resolution: 2k
   target_formats: [glb, fbx, obj, usdz]
   preview: textured
+variants:                        # Meshy Retexture of every model, 10 credits per model and variant; shown as skins in the viewer
+  - slug: ornate
+    name: Ornate
+    prompt: royal ornate finish, gold filigree and engraving, polished steel, deep blue and crimson accents
+  - slug: battle-worn
+    name: Battle-worn
+    prompt: scratched, dented and chipped, dull rusted steel, dirty worn leather, faded paint
 models:
   - slug: longsword
     name: Longsword

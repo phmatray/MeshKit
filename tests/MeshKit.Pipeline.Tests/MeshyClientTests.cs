@@ -112,6 +112,23 @@ public class MeshyClientTests
     }
 
     [Fact]
+    public async Task CreateRetexture_posts_style_prompt_and_keeps_original_uv()
+    {
+        var (client, handler) = Create();
+        handler.Enqueue(HttpStatusCode.Accepted, """{"result":"rt-1"}""");
+
+        await client.CreateRetextureAsync(new RetextureRequest("task-2", "covered in snow", "latest", true, "2k", ["glb"], AlphaThumbnail: true), CancellationToken.None);
+
+        Assert.Equal("https://api.meshy.ai/openapi/v1/retexture", handler.Requests[0].Request.RequestUri!.ToString());
+        using var doc = JsonDocument.Parse(handler.Requests[0].Body!);
+        Assert.Equal("task-2", doc.RootElement.GetProperty("input_task_id").GetString());
+        Assert.Equal("covered in snow", doc.RootElement.GetProperty("text_style_prompt").GetString());
+        Assert.True(doc.RootElement.GetProperty("enable_original_uv").GetBoolean());
+        Assert.True(doc.RootElement.GetProperty("enable_pbr").GetBoolean());
+        Assert.True(doc.RootElement.GetProperty("alpha_thumbnail").GetBoolean());
+    }
+
+    [Fact]
     public async Task CreatePreview_omits_null_polycount()
     {
         var (client, handler) = Create();

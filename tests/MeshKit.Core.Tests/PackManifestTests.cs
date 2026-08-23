@@ -43,6 +43,7 @@ public class PackManifestTests
             Status = ModelStatus.Succeeded,
             Files = [new ModelFile("glb", "private/chest/chest.glb", 10)],
             Lods = [new ModelLod(1, 2000, "lod-1", [new ModelFile("glb", "private/chest/lod1/chest_lod1.glb", 5)], 1990, 5)],
+            Variants = [new ModelVariant("snow", "Snow", "rt-1", [new ModelFile("glb", "private/chest/variants/snow/chest_snow.glb", 7)], "public/thumbs/chest.snow.png", "public/preview/chest.snow.glb", 10)],
         };
         var manifest = PackManifest.FromDefinition(Definition(), DateTimeOffset.UnixEpoch) with { Models = [entry] };
 
@@ -51,7 +52,8 @@ public class PackManifestTests
         Assert.Equal(manifest, back);
         var lod = Assert.Single(back.Models[0].LodList);
         Assert.Equal((1, 2000, 1990, 5), (lod.Level, lod.TargetPolycount, lod.Triangles, lod.ConsumedCredits));
-        Assert.Equal(["private/chest/chest.glb", "private/chest/lod1/chest_lod1.glb"], back.Models[0].AllFiles.Select(f => f.Path));
+        Assert.Equal(["private/chest/chest.glb", "private/chest/lod1/chest_lod1.glb", "private/chest/variants/snow/chest_snow.glb"], back.Models[0].AllFiles.Select(f => f.Path));
+        Assert.Equal(("snow", "Snow", "public/preview/chest.snow.glb"), (back.Models[0].VariantList[0].Slug, back.Models[0].VariantList[0].Name, back.Models[0].VariantList[0].Preview));
         Assert.NotEqual(manifest, manifest with { Models = [entry with { Lods = null }] });
     }
 

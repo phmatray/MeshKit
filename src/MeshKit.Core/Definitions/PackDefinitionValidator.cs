@@ -89,6 +89,29 @@ public static partial class PackDefinitionValidator
             }
         }
 
+        if (pack.VariantList.Count > PackDefinition.MaxVariants)
+        {
+            errors.Add($"variants: at most {PackDefinition.MaxVariants} (got {pack.VariantList.Count}).");
+        }
+
+        var variantSlugs = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var variant in pack.VariantList)
+        {
+            if (!Slug.IsValid(variant.Slug))
+            {
+                errors.Add($"Variant slug '{variant.Slug}' is invalid: use lowercase letters, digits and single dashes.");
+            }
+            else if (!variantSlugs.Add(variant.Slug))
+            {
+                errors.Add($"Duplicate variant slug '{variant.Slug}'.");
+            }
+
+            if (variant.Prompt.Length > MaxPromptLength)
+            {
+                errors.Add($"Variant '{variant.Slug}': prompt is {variant.Prompt.Length} characters, Meshy allows at most {MaxPromptLength}.");
+            }
+        }
+
         if (pack.Sample is { } sample && !pack.Models.Any(m => m.Slug == sample))
         {
             errors.Add($"sample '{sample}' is not one of the pack's models (expected one of {Join(pack.Models.Select(m => m.Slug))}).");

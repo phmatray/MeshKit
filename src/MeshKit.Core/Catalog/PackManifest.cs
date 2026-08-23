@@ -111,15 +111,19 @@ public sealed record ModelEntry(
     IReadOnlyList<string>? Tags = null,
     string? Category = null,
     ModelMetadata? Metadata = null,
-    IReadOnlyList<ModelLod>? Lods = null)
+    IReadOnlyList<ModelLod>? Lods = null,
+    IReadOnlyList<ModelVariant>? Variants = null)
 {
     public IReadOnlyList<string> TagList => Tags ?? [];
 
     /// <summary>Lighter remeshed copies of the full model, heaviest first. Empty when the pack defines no LODs.</summary>
     public IReadOnlyList<ModelLod> LodList => Lods ?? [];
 
-    /// <summary>Every downloadable file: the full model's plus every LOD's.</summary>
-    public IEnumerable<ModelFile> AllFiles => Files.Concat(LodList.SelectMany(l => l.Files));
+    /// <summary>Alternative texture sets of the full model. Empty when the pack defines no variants.</summary>
+    public IReadOnlyList<ModelVariant> VariantList => Variants ?? [];
+
+    /// <summary>Every downloadable file: the full model's, every LOD's and every variant's.</summary>
+    public IEnumerable<ModelFile> AllFiles => Files.Concat(LodList.SelectMany(l => l.Files)).Concat(VariantList.SelectMany(v => v.Files));
 
     public static ModelEntry Pending(ModelDefinition model) => new(
         Slug: model.Slug,
@@ -155,9 +159,23 @@ public sealed record ModelEntry(
         && Category == other.Category
         && Equals(Metadata, other.Metadata)
         && Files.SequenceEqual(other.Files)
-        && LodList.SequenceEqual(other.LodList);
+        && LodList.SequenceEqual(other.LodList)
+        && VariantList.SequenceEqual(other.VariantList);
 
     public override int GetHashCode() => HashCode.Combine(Slug, Status, Files.Count);
+}
+
+/// <summary>
+/// One texture variant of a model: the refined mesh retextured by Meshy from a style prompt. <paramref name="Preview"/>
+/// and <paramref name="Thumbnail"/> are public so the store can show the skin; <paramref name="Files"/> are the paid ones.
+/// </summary>
+public sealed record ModelVariant(string Slug, string Name, string TaskId, IReadOnlyList<ModelFile> Files, string? Thumbnail, string? Preview, int ConsumedCredits)
+{
+    public bool Equals(ModelVariant? other) =>
+        other is not null && Slug == other.Slug && Name == other.Name && TaskId == other.TaskId && Thumbnail == other.Thumbnail
+        && Preview == other.Preview && ConsumedCredits == other.ConsumedCredits && Files.SequenceEqual(other.Files);
+
+    public override int GetHashCode() => HashCode.Combine(Slug, TaskId);
 }
 
 /// <summary>

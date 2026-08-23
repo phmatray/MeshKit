@@ -146,6 +146,20 @@ public class GenerationLeverTests
     }
 
     [Fact]
+    public void Variants_parse_and_are_validated()
+    {
+        var pack = PackDefinitionLoader.Load(Yaml.Replace("models:", "variants:\n  - { slug: snow, name: Snow, prompt: covered in fresh snow }\n  - { slug: autumn, name: Autumn, prompt: autumn colours }\nmodels:"));
+        Assert.Equal(["snow", "autumn"], pack.VariantList.Select(v => v.Slug));
+        Assert.Equal("Snow", pack.VariantList[0].Name);
+        Assert.Empty(PackDefinitionValidator.Validate(pack));
+
+        Assert.Contains(PackDefinitionValidator.Validate(pack with { Variants = [new VariantDefinition("snow", "A", "x"), new VariantDefinition("snow", "B", "y")] }), e => e.Contains("Duplicate variant"));
+        Assert.Contains(PackDefinitionValidator.Validate(pack with { Variants = [new VariantDefinition("Bad Slug", "A", "x")] }), e => e.Contains("Variant slug"));
+        Assert.Contains(PackDefinitionValidator.Validate(pack with { Variants = [new VariantDefinition("a", "A", new string('x', 601))] }), e => e.Contains("600"));
+        Assert.Contains(PackDefinitionValidator.Validate(pack with { Variants = Enumerable.Range(0, 4).Select(i => new VariantDefinition($"v{i}", "V", "p")).ToList() }), e => e.Contains("at most 3"));
+    }
+
+    [Fact]
     public void Sample_names_one_of_the_models_and_reaches_the_manifest()
     {
         var pack = PackDefinitionLoader.Load(Yaml.Replace("models:", "sample: pine\nmodels:"));

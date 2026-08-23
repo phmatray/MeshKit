@@ -27,6 +27,13 @@ generation:
   texture_resolution: 2k
   target_formats: [glb, fbx, obj, usdz]
   preview: textured
+variants:                        # Meshy Retexture of every model, 10 credits per model and variant; shown as skins in the viewer
+  - slug: faction-red
+    name: Faction Red
+    prompt: clean white and crimson red faction livery with grey panels, bright status lights
+  - slug: derelict
+    name: Derelict
+    prompt: rusted, scorched and grimy panels, burnt edges, flickering broken lights, years of neglect
 models:
   - slug: cargo-crate
     name: Cargo Crate

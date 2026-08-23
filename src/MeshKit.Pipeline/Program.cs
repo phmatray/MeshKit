@@ -93,6 +93,7 @@ internal static class Cli
             + (gen.TextureImage is null ? "" : $" · texture_image: {gen.TextureImage}"));
         Console.WriteLine($"  sample:  {definition.Sample ?? "none (set `sample: <model>` to offer a free model)"}");
         Console.WriteLine($"  lods:    {(gen.LodLevels.Count == 0 ? "none" : string.Join(" / ", gen.LodLevels) + " polygons (Meshy Remesh, 5 credits each)")}");
+        Console.WriteLine($"  variants: {(definition.VariantList.Count == 0 ? "none" : string.Join(", ", definition.VariantList.Select(v => v.Slug)) + " (Meshy Retexture, 10 credits per model and variant)")}");
         Console.WriteLine($"  output:  {packDir}");
         if (dryRun)
         {

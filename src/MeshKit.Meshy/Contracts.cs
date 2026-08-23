@@ -33,11 +33,24 @@ public sealed record RefineRequest(
 /// <summary>Remesh of a finished text-to-3D task to a lighter polycount (a LOD). 5 credits.</summary>
 public sealed record RemeshRequest(string InputTaskId, IReadOnlyList<string> TargetFormats, string Topology, int TargetPolycount);
 
+/// <summary>Retexture of a finished text-to-3D task from a style prompt (a variant skin). 10 credits.</summary>
+/// <param name="EnableOriginalUv">Keep the model's UV layout, so every variant's maps are interchangeable on the same mesh.</param>
+public sealed record RetextureRequest(
+    string InputTaskId,
+    string TextStylePrompt,
+    string AiModel,
+    bool EnablePbr,
+    string TextureResolution,
+    IReadOnlyList<string> TargetFormats,
+    bool EnableOriginalUv = true,
+    bool AlphaThumbnail = false);
+
 /// <summary>Which Meshy task family an id belongs to; they live under different API paths but share one shape.</summary>
 public enum MeshyTaskKind
 {
     TextTo3d,
     Remesh,
+    Retexture,
 }
 
 public enum MeshyTaskStatus
@@ -75,6 +88,8 @@ public interface IMeshyClient
     Task<string> CreateRefineAsync(RefineRequest request, CancellationToken cancellationToken);
 
     Task<string> CreateRemeshAsync(RemeshRequest request, CancellationToken cancellationToken);
+
+    Task<string> CreateRetextureAsync(RetextureRequest request, CancellationToken cancellationToken);
 
     Task<MeshyTask> GetTaskAsync(string taskId, CancellationToken cancellationToken, MeshyTaskKind kind = MeshyTaskKind.TextTo3d);
 

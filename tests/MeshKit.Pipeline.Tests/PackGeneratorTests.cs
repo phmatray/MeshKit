@@ -199,6 +199,30 @@ public sealed class PackGeneratorTests : IDisposable
     }
 
     [Fact]
+    public async Task Variants_are_retextured_from_the_refine_task_with_public_preview_and_swatch()
+    {
+        var definition = Definition("chest") with { Variants = [new VariantDefinition("snow", "Snow", "covered in snow")] };
+
+        var manifest = await Generator().GenerateAsync(definition, PackDir, Fast, CancellationToken.None);
+
+        var entry = Assert.Single(manifest.Models);
+        var variant = Assert.Single(entry.VariantList);
+        Assert.Equal(("snow", "Snow", 10), (variant.Slug, variant.Name, variant.ConsumedCredits));
+        var request = Assert.Single(_meshy.RetextureRequests);
+        Assert.Equal(("ref-prev-prompt chest", "covered in snow", true), (request.InputTaskId, request.TextStylePrompt, request.EnableOriginalUv));
+        Assert.Contains(variant.Files, f => f.Path == "private/chest/variants/snow/chest_snow.glb");
+        Assert.Contains(variant.Files, f => f.Path == "private/chest/variants/snow/textures/base_color.png");
+        Assert.Equal("public/preview/chest.snow.glb", variant.Preview);
+        Assert.Equal("public/thumbs/chest.snow.png", variant.Thumbnail);
+        Assert.All(entry.AllFiles.Select(f => f.Path).Append(variant.Preview!).Append(variant.Thumbnail!), p => Assert.True(File.Exists(Path.Combine(PackDir, p)), p));
+
+        // a rerun adds nothing
+        _meshy.RetextureRequests.Clear();
+        await Generator().GenerateAsync(definition, PackDir, Fast, CancellationToken.None);
+        Assert.Empty(_meshy.RetextureRequests);
+    }
+
+    [Fact]
     public async Task Rerun_skips_finished_models_unless_their_prompt_changed()
     {
         await Generator().GenerateAsync(Definition("chest", "barrel"), PackDir, Fast, CancellationToken.None);

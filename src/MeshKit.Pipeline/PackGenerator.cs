@@ -38,7 +38,9 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
 
         Persist();
 
-        var pending = definition.Models.Where(m => entries[m.Slug].Status != ModelStatus.Succeeded || MissingLods(definition.Generation, entries[m.Slug], packDirectory).Count > 0).ToList();
+        var pending = definition.Models.Where(m => entries[m.Slug].Status != ModelStatus.Succeeded
+            || MissingLods(definition.Generation, entries[m.Slug], packDirectory).Count > 0
+            || MissingVariants(definition, entries[m.Slug], packDirectory).Count > 0).ToList();
         logger.LogInformation("Pack {Slug}: {Pending} model(s) to generate or complete, {Done} already complete",
             definition.Slug, pending.Count, definition.Models.Count - pending.Count);
 
@@ -61,8 +63,11 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
 
                 if (entry.Status == ModelStatus.Succeeded)
                 {
-                    // LODs are a separate, resumable step: a remesh failure never costs the model itself.
-                    entries[model.Slug] = await CompleteLodsAsync(definition, entry, packDirectory, options, abort.Token);
+                    // LODs and variants are separate, resumable steps: a failure there never costs the model itself.
+                    entry = await CompleteLodsAsync(definition, entry, packDirectory, options, abort.Token);
+                    entries[model.Slug] = entry;
+                    Persist();
+                    entries[model.Slug] = await CompleteVariantsAsync(definition, entry, packDirectory, options, abort.Token);
                 }
             }
             catch (MeshyOutOfCreditsException ex)
@@ -362,6 +367,108 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
         }
 
         return entry with { Lods = lods.OrderBy(l => l.Level).ToList() };
+    }
+
+    /// <summary>Variants (in definition order) the entry still lacks: never made, renamed, or files gone.</summary>
+    internal static List<VariantDefinition> MissingVariants(PackDefinition pack, ModelEntry entry, string packDirectory)
+    {
+        return pack.VariantList.Where(v =>
+        {
+            var existing = entry.VariantList.FirstOrDefault(x => x.Slug == v.Slug);
+            return existing is null
+                || existing.Files.Count == 0
+                || !existing.Files.All(f => PackPaths.IsSafeRelative(f.Path) && File.Exists(PackPaths.Resolve(packDirectory, f.Path)));
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Retextures the refined task once per missing variant (Meshy Retexture, 10 credits each), keeping the
+    /// original UVs so every skin fits the same mesh. Same failure policy as LODs: out of credits aborts the run,
+    /// anything else keeps what was made and leaves the rest for the next run.
+    /// </summary>
+    private async Task<ModelEntry> CompleteVariantsAsync(PackDefinition pack, ModelEntry entry, string packDirectory, GeneratorOptions options, CancellationToken ct)
+    {
+        var missing = MissingVariants(pack, entry, packDirectory);
+        if (missing.Count == 0)
+        {
+            return entry;
+        }
+
+        if (entry.RefineTaskId is null)
+        {
+            logger.LogWarning("[{Model}] cannot build variants: no refine task id in the manifest", entry.Slug);
+            return entry;
+        }
+
+        var gen = pack.Generation;
+        var variants = entry.VariantList.Where(v => !missing.Any(m => m.Slug == v.Slug)).ToList();
+        foreach (var variant in missing)
+        {
+            try
+            {
+                logger.LogInformation("[{Model}] variant '{Variant}' retexture starting", entry.Slug, variant.Slug);
+                var taskId = await meshy.CreateRetextureAsync(
+                    new RetextureRequest(entry.RefineTaskId, variant.Prompt, gen.AiModel, gen.EnablePbr, gen.TextureResolution, gen.TargetFormats,
+                        EnableOriginalUv: true, AlphaThumbnail: gen.AlphaThumbnail), ct);
+                var task = await meshy.WaitForTaskAsync(taskId, options.PollInterval, options.TaskTimeout, ct, MeshyTaskKind.Retexture);
+
+                var files = new List<ModelFile>();
+                foreach (var (format, url) in task.ModelUrls.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+                {
+                    var relative = $"{PackPaths.PrivateRoot}/{entry.Slug}/variants/{variant.Slug}/{entry.Slug}_{variant.Slug}.{format}";
+                    var bytes = await meshy.DownloadAsync(new Uri(url), PackPaths.Resolve(packDirectory, relative), ct);
+                    files.Add(new ModelFile(format, relative, bytes));
+                }
+
+                foreach (var textureSet in task.TextureUrls)
+                {
+                    foreach (var (map, url) in textureSet.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+                    {
+                        var relative = $"{PackPaths.PrivateRoot}/{entry.Slug}/variants/{variant.Slug}/textures/{map}.png";
+                        var bytes = await meshy.DownloadAsync(new Uri(url), PackPaths.Resolve(packDirectory, relative), ct);
+                        files.Add(new ModelFile(map, relative, bytes));
+                    }
+                }
+
+                if (files.Count == 0)
+                {
+                    throw new InvalidOperationException($"Retexture task {taskId} succeeded without any model url.");
+                }
+
+                // Public copies so the store can show the skin: the glb in the viewer, the render as a swatch.
+                string? preview = null;
+                if (files.FirstOrDefault(f => f.Format == "glb") is { } glb)
+                {
+                    preview = PackPaths.VariantPreview(entry.Slug, variant.Slug);
+                    var target = PackPaths.Resolve(packDirectory, preview);
+                    Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                    File.Copy(PackPaths.Resolve(packDirectory, glb.Path), target, overwrite: true);
+                }
+
+                var thumbnail = task.BestThumbnailUrl is null
+                    ? null
+                    : await TryDownloadAsync(new Uri(task.BestThumbnailUrl), PackPaths.VariantThumbnail(entry.Slug, variant.Slug), packDirectory, ct);
+
+                variants.Add(new ModelVariant(variant.Slug, variant.Name, taskId, files, thumbnail, preview, task.ConsumedCredits));
+                logger.LogInformation("[{Model}] variant '{Variant}' done: {Files} file(s), {Credits} credits", entry.Slug, variant.Slug, files.Count, task.ConsumedCredits);
+            }
+            catch (MeshyOutOfCreditsException)
+            {
+                throw;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex) when (ex is MeshyApiException or MeshyTaskFailedException or MeshyTimeoutException or IOException or InvalidOperationException or HttpRequestException)
+            {
+                logger.LogError("[{Model}] variant '{Variant}' failed: {Message} — rerun to retry", entry.Slug, variant.Slug, ex.Message);
+                break;
+            }
+        }
+
+        var order = pack.VariantList.Select((v, i) => (v.Slug, i)).ToDictionary(x => x.Slug, x => x.i);
+        return entry with { Variants = variants.OrderBy(v => order.GetValueOrDefault(v.Slug, int.MaxValue)).ToList() };
     }
 
     /// <summary>

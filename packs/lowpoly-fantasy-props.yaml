@@ -32,6 +32,13 @@ generation:
   texture_resolution: 2k
   target_formats: [glb, fbx, obj, usdz]
   preview: textured
+variants:                        # Meshy Retexture of every model, 10 credits per model and variant; shown as skins in the viewer
+  - slug: mossy
+    name: Mossy
+    prompt: overgrown with green moss and lichen, damp dark rotten wood, rusted iron, muddy base
+  - slug: frost
+    name: Frost
+    prompt: covered in frost and a thin layer of snow, icy blue tint, frozen wood and metal
 models:
   - slug: treasure-chest
     name: Treasure Chest

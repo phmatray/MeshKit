@@ -15,6 +15,7 @@ public sealed class MeshyClient(HttpClient http, MeshyOptions options, ILogger<M
 {
     private const string TextTo3dPath = "/openapi/v2/text-to-3d";
     private const string RemeshPath = "/openapi/v1/remesh";
+    private const string RetexturePath = "/openapi/v1/retexture";
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -75,7 +76,28 @@ public sealed class MeshyClient(HttpClient http, MeshyOptions options, ILogger<M
         return await CreateTaskAsync(body, cancellationToken, RemeshPath);
     }
 
-    private static string PathFor(MeshyTaskKind kind) => kind == MeshyTaskKind.Remesh ? RemeshPath : TextTo3dPath;
+    public async Task<string> CreateRetextureAsync(RetextureRequest request, CancellationToken cancellationToken)
+    {
+        var body = new
+        {
+            input_task_id = request.InputTaskId,
+            text_style_prompt = request.TextStylePrompt,
+            ai_model = request.AiModel,
+            enable_original_uv = request.EnableOriginalUv,
+            enable_pbr = request.EnablePbr,
+            texture_resolution = request.TextureResolution,
+            target_formats = request.TargetFormats,
+            alpha_thumbnail = request.AlphaThumbnail,
+        };
+        return await CreateTaskAsync(body, cancellationToken, RetexturePath);
+    }
+
+    private static string PathFor(MeshyTaskKind kind) => kind switch
+    {
+        MeshyTaskKind.Remesh => RemeshPath,
+        MeshyTaskKind.Retexture => RetexturePath,
+        _ => TextTo3dPath,
+    };
 
     public async Task<MeshyTask> GetTaskAsync(string taskId, CancellationToken cancellationToken, MeshyTaskKind kind = MeshyTaskKind.TextTo3d)
     {

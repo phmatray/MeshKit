@@ -63,6 +63,11 @@ models:
     ultra: true                                               # optional; hero pieces only
 ```
 
+Texture variants (`variants:` on the pack, up to 3 — e.g. `{ slug: snow, name: Snow, prompt: covered in fresh snow }`)
+retexture every model's refined mesh with the original UVs kept (Meshy Retexture, 10 credits per model and
+variant). They ship under `private/<model>/variants/<slug>/` with their own texture maps, show as selectable
+skins in the viewer, and like LODs are added to an existing pack by a rerun without `regenerate`.
+
 LODs are a separate, resumable stage: re-running the workflow (without `regenerate`) on an existing pack adds
 the missing levels from the refine task — no model is regenerated, 5 credits per level. They ship as
 `private/<model>/lod1/<model>_lod1.<fmt>` next to the full model and are listed on the pack page.

@@ -89,7 +89,13 @@ public static class PackDefinitionLoader
             Category: raw.Category?.Trim() ?? "props",
             Style: raw.Style?.Trim() ?? (generation.ModelType == GenerationSettings.ModelTypeLowpoly || generation.ShouldRemesh ? "lowpoly" : "stylized"),
             License: license,
-            Sample: string.IsNullOrWhiteSpace(raw.Sample) ? null : raw.Sample.Trim());
+            Sample: string.IsNullOrWhiteSpace(raw.Sample) ? null : raw.Sample.Trim(),
+            Variants: raw.Variants is { Count: > 0 }
+                ? raw.Variants.Select((v, i) => new VariantDefinition(
+                    Require(v.Slug, $"variants[{i}].slug"),
+                    Require(v.Name, $"variants[{i}].name"),
+                    Require(v.Prompt, $"variants[{i}].prompt"))).ToList()
+                : null);
     }
 
     private static IReadOnlyList<string> NormalizeTags(List<string>? tags) =>
@@ -114,6 +120,14 @@ public static class PackDefinitionLoader
         public string? Style { get; set; }
         public LicenseYaml? License { get; set; }
         public string? Sample { get; set; }
+        public List<VariantYaml>? Variants { get; set; }
+    }
+
+    private sealed class VariantYaml
+    {
+        public string? Slug { get; set; }
+        public string? Name { get; set; }
+        public string? Prompt { get; set; }
     }
 
     private sealed class LicenseYaml

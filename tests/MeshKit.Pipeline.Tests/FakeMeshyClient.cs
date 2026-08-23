@@ -12,6 +12,7 @@ public sealed class FakeMeshyClient : IMeshyClient
     public ConcurrentBag<PreviewRequest> PreviewRequests { get; } = [];
     public ConcurrentBag<RefineRequest> RefineRequests { get; } = [];
     public ConcurrentBag<RemeshRequest> RemeshRequests { get; } = [];
+    public ConcurrentBag<RetextureRequest> RetextureRequests { get; } = [];
     public ConcurrentBag<(Uri Url, string Path)> Downloads { get; } = [];
 
     /// <summary>Task id → factory. Default: every task succeeds with a glb + fbx and a thumbnail.</summary>
@@ -49,6 +50,18 @@ public sealed class FakeMeshyClient : IMeshyClient
         }
 
         return Task.FromResult($"lod-{request.TargetPolycount}-{request.InputTaskId}");
+    }
+
+    public Task<string> CreateRetextureAsync(RetextureRequest request, CancellationToken cancellationToken)
+    {
+        RetextureRequests.Add(request);
+        if (CreateFailures.TryGetValue($"retexture:{request.InputTaskId}", out var ex))
+        {
+            throw ex;
+        }
+
+        // variant tasks look like refine tasks to the fake: textures + thumbnail
+        return Task.FromResult($"ref-var-{request.TextStylePrompt}-{request.InputTaskId}");
     }
 
     public Task<MeshyTask> GetTaskAsync(string taskId, CancellationToken cancellationToken, MeshyTaskKind kind = MeshyTaskKind.TextTo3d) => Task.FromResult(Resolve(taskId));
@@ -92,7 +105,8 @@ public sealed class FakeMeshyClient : IMeshyClient
             ? [new Dictionary<string, string> { ["base_color"] = $"https://cdn.test/{id}/base_color.png" }]
             : [],
         ErrorMessage: null,
-        ConsumedCredits: id.StartsWith("ref-", StringComparison.Ordinal) ? 10 : id.StartsWith("lod-", StringComparison.Ordinal) ? 5 : 20);
+        ConsumedCredits: id.StartsWith("ref-", StringComparison.Ordinal) ? 10 : id.StartsWith("lod-", StringComparison.Ordinal) ? 5 : 20,
+        AlphaThumbnailUrl: null);
 
     public static MeshyTask Failed(string id, string message) => new(
         id, MeshyTaskStatus.Failed, 0, new Dictionary<string, string>(), null, [], message, 0);

@@ -19,7 +19,20 @@ public sealed record PackDefinition(
     string Category,
     string Style,
     LicenseChoice License,
-    string? Sample = null);
+    string? Sample = null,
+    IReadOnlyList<VariantDefinition>? Variants = null)
+{
+    /// <summary>Texture variants applied to every model (Meshy Retexture, 10 credits per model and variant). Never null.</summary>
+    public IReadOnlyList<VariantDefinition> VariantList => Variants ?? [];
+
+    public const int MaxVariants = 3;
+}
+
+/// <summary>
+/// One alternative texture set for the whole pack — "weathered", "snow", "faction red" — described by a style
+/// prompt. Same meshes, same UVs, a different skin: level designers get variety without new geometry.
+/// </summary>
+public sealed record VariantDefinition(string Slug, string Name, string Prompt);
 
 /// <param name="Tags">Model-level tags; pack tags are inherited by every model at index time.</param>
 /// <param name="TexturePrompt">Overrides the pack's <c>texture_image</c> for this model (Meshy accepts one or the other, never both).</param>

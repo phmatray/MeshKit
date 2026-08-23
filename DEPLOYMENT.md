@@ -37,6 +37,14 @@ curl -s https://meshkit.atypical.consulting/health
   `checkout.session.async_payment_failed`; its signing secret goes in `STRIPE__WEBHOOKSECRET`.
 - After editing `.env`: `docker compose up -d` (recreates the container with the new environment).
 
+## Email (transactional)
+
+`SMTP__*` in `/opt/meshkit/.env` — Infomaniak (`mail.infomaniak.com:587`, STARTTLS), same mailbox as
+AtypWebsite (`philippe@atypical.consulting`), From "MeshKit by Atypical Consulting". Sends purchase
+confirmations, address confirmations and password resets; delivery is logged as
+`Email sent to <addr>: <subject>` / `Email to <addr> failed after 3 attempts`. With `SMTP__HOST` empty
+the app logs instead of sending.
+
 ## First-time setup (what was done on 2026-08-23, for the record)
 
 ```bash

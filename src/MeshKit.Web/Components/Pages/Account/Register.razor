@@ -4,6 +4,10 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IdentityRedirectManager RedirectManager
+@inject IEmailQueue Emails
+@inject IOptions<MeshKitOptions> MeshKit
+@using MeshKit.Web.Email
+@using Microsoft.Extensions.Options
 
 <PageTitle>Create an account — MeshKit</PageTitle>
 
@@ -51,6 +55,10 @@
             _error = "Error: " + string.Join(" ", result.Errors.Select(e => e.Description));
             return;
         }
+
+        var token = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        var confirmUrl = $"{MeshKit.Value.PublicBaseUrl.TrimEnd('/')}/account/confirm-email?userId={Uri.EscapeDataString(user.Id)}&code={IdentityEndpoints.EncodeToken(token)}";
+        Emails.Enqueue(EmailTemplates.ConfirmEmail(user.Email!, confirmUrl));
 
         await SignInManager.SignInAsync(user, isPersistent: true);
         RedirectManager.RedirectTo(ReturnUrl ?? "library");

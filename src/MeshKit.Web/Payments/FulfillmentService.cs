@@ -1,4 +1,7 @@
+using MeshKit.Web.Catalog;
 using MeshKit.Web.Data;
+using MeshKit.Web.Email;
+using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 
 namespace MeshKit.Web.Payments;
@@ -18,7 +21,13 @@ public sealed record FulfillmentResult(FulfillmentOutcome Outcome, string? Reaso
 /// webhooks and sends both <c>completed</c> and <c>async_payment_succeeded</c>, and a replay must
 /// never produce a second entitlement or order.
 /// </summary>
-public sealed class FulfillmentService(ApplicationDbContext db, ILogger<FulfillmentService> logger, TimeProvider? timeProvider = null)
+public sealed class FulfillmentService(
+    ApplicationDbContext db,
+    ILogger<FulfillmentService> logger,
+    TimeProvider? timeProvider = null,
+    IEmailQueue? emails = null,
+    ICatalogService? catalog = null,
+    IOptions<MeshKitOptions>? meshKit = null)
 {
     private readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
 
@@ -76,7 +85,27 @@ public sealed class FulfillmentService(ApplicationDbContext db, ILogger<Fulfillm
 
         await db.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Fulfilled session {Session}: user {User} now owns {Pack}", session.SessionId, userId, packSlug);
+        await SendConfirmationAsync(userId, packSlug, order, cancellationToken);
         return new FulfillmentResult(FulfillmentOutcome.Fulfilled);
+    }
+
+    private async Task SendConfirmationAsync(string userId, string packSlug, Order order, CancellationToken cancellationToken)
+    {
+        if (emails is null || meshKit is null)
+        {
+            return;
+        }
+
+        var email = await db.Users.Where(u => u.Id == userId).Select(u => u.Email).FirstOrDefaultAsync(cancellationToken);
+        if (string.IsNullOrEmpty(email))
+        {
+            logger.LogWarning("No email on file for user {User}; purchase confirmation not sent", userId);
+            return;
+        }
+
+        var pack = catalog?.Find(packSlug);
+        emails.Enqueue(EmailTemplates.PurchaseConfirmation(
+            email, pack?.Name ?? packSlug, meshKit.Value.PublicBaseUrl.TrimEnd('/'), packSlug, order.AmountTotal, order.Currency, pack?.License?.Name));
     }
 
     public async Task MarkFailedAsync(string sessionId, CancellationToken cancellationToken)

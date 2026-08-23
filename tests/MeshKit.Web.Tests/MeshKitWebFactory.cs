@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using MeshKit.Web.Data;
+using MeshKit.Web.Email;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -24,6 +25,21 @@ public sealed class MeshKitWebFactory : WebApplicationFactory<Program>
 
     public DirectoryInfo Root { get; } = Directory.CreateTempSubdirectory("meshkit-web");
 
+    /// <summary>Every email the app sent through the worker, in order.</summary>
+    public CapturingEmailSender Outbox { get; } = new();
+
+    /// <summary>Waits for the background worker to deliver at least <paramref name="count"/> messages.</summary>
+    public async Task<IReadOnlyList<EmailMessage>> WaitForEmailsAsync(int count, TimeSpan? timeout = null)
+    {
+        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(5));
+        while (Outbox.Sent.Count < count && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(25);
+        }
+
+        return Outbox.Sent.ToList();
+    }
+
     public string CatalogPath => Path.Combine(Root.FullName, "catalog");
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -37,10 +53,14 @@ public sealed class MeshKitWebFactory : WebApplicationFactory<Program>
         builder.UseSetting("Stripe:SecretKey", "rk_test_unused");
         builder.UseSetting("Stripe:WebhookSecret", WebhookSecret);
 
+        builder.UseSetting("Smtp:Host", "smtp.test");
+        builder.UseSetting("Smtp:FromAddress", "store@test");
+
         builder.ConfigureTestServices(services =>
         {
             services.AddAuthentication(TestAuthHandler.SchemeName)
                 .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
+            services.AddSingleton<IEmailSender>(Outbox);
         });
     }
 
@@ -75,6 +95,17 @@ public sealed class MeshKitWebFactory : WebApplicationFactory<Program>
                 // SQLite may still hold the file for a moment; a leaked temp dir is not worth failing a test.
             }
         }
+    }
+}
+
+public sealed class CapturingEmailSender : IEmailSender
+{
+    public System.Collections.Concurrent.ConcurrentQueue<EmailMessage> Sent { get; } = new();
+
+    public Task SendAsync(EmailMessage message, CancellationToken cancellationToken)
+    {
+        Sent.Enqueue(message);
+        return Task.CompletedTask;
     }
 }
 

@@ -8,7 +8,7 @@
 
 <div class="mx-auto max-w-md space-y-6">
     <h1 class="text-3xl font-bold">Log in</h1>
-    <StatusMessage Message="@_error" />
+    <StatusMessage Message="@(_error ?? (Confirmed == "1" ? "Email confirmed — thanks." : Confirmed == "0" ? "Error: that confirmation link is invalid or expired." : Reset == "1" ? "Password changed — log in with the new one." : null))" />
     <EditForm Model="Input!" method="post" OnValidSubmit="LoginAsync" FormName="login" class="space-y-4">
         <DataAnnotationsValidator />
         <div>
@@ -26,6 +26,7 @@
         </label>
         <button type="submit" class="w-full rounded-full bg-ink px-6 py-3 font-semibold text-cream hover:bg-ink/85">Log in</button>
     </EditForm>
+    <p class="text-sm text-ink/70"><a href="account/forgot-password" class="underline">Forgot your password?</a></p>
     <p class="text-sm text-ink/70">New here? <a href="account/register?returnUrl=@ReturnUrl" class="underline">Create an account</a>.</p>
 </div>
 
@@ -35,6 +36,10 @@
     [SupplyParameterFromForm] private InputModel? Input { get; set; }
 
     [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromQuery] private string? Confirmed { get; set; }
+
+    [SupplyParameterFromQuery] private string? Reset { get; set; }
 
     protected override void OnInitialized() => Input ??= new InputModel();
 

@@ -20,6 +20,7 @@
          direct reference does not remove a transitive package, it just lets it fall back. -->
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
     <PackageReference Include="Stripe.net" />
+    <PackageReference Include="MailKit" />
   </ItemGroup>
 
   <ItemGroup>

@@ -54,6 +54,7 @@ builder.Services.AddScoped<IEntitlementReader, EntitlementReader>();
 
 builder.Services.AddMeshKitPayments(builder.Configuration);
 builder.Services.AddMeshKitIngest(builder.Configuration);
+builder.Services.AddMeshKitEmail(builder.Configuration);
 
 // Persist cookie-signing keys when a path is configured (the container mounts /app/data for this);
 // without it every restart would log every buyer out.

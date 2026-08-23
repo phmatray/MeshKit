@@ -8,6 +8,11 @@ public class PackDefinitionTests
         slug: lowpoly-fantasy-props
         name: Low-Poly Fantasy Props
         description: Ten game-ready props.
+        tags: [Fantasy, dungeon, fantasy]
+        category: props
+        style: lowpoly
+        license:
+          id: meshkit-standard
         price:
           amount: 1900
           currency: eur
@@ -24,6 +29,8 @@ public class PackDefinitionTests
             name: Treasure Chest
             prompt: a closed wooden treasure chest, low poly
             texture_prompt: weathered oak
+            tags: [chest, loot]
+            category: furniture
           - slug: barrel
             name: Barrel
             prompt: a wooden barrel, low poly
@@ -47,6 +54,75 @@ public class PackDefinitionTests
         Assert.Equal(2, pack.Models.Count);
         Assert.Equal("weathered oak", pack.Models[0].TexturePrompt);
         Assert.Null(pack.Models[1].TexturePrompt);
+        Assert.Equal(["fantasy", "dungeon"], pack.Tags);
+        Assert.Equal("props", pack.Category);
+        Assert.Equal("lowpoly", pack.Style);
+        Assert.Equal(LicenseChoice.Default, pack.License);
+        Assert.Equal(["chest", "loot"], pack.Models[0].Tags);
+        Assert.Equal("furniture", pack.Models[0].Category);
+        Assert.Empty(pack.Models[1].Tags);
+        Assert.Null(pack.Models[1].Category);
+    }
+
+    [Fact]
+    public void Defaults_for_category_style_and_license_follow_the_generation_settings()
+    {
+        var pack = PackDefinitionLoader.Load("""
+            slug: a
+            name: A
+            price: { amount: 100, currency: usd }
+            generation: { model_type: lowpoly }
+            models:
+              - { slug: m, name: M, prompt: p }
+            """);
+
+        Assert.Equal("props", pack.Category);
+        Assert.Equal("lowpoly", pack.Style);
+        Assert.Empty(pack.Tags);
+        Assert.Equal("meshkit-standard", pack.License.Id);
+    }
+
+    [Fact]
+    public void Custom_license_file_is_accepted()
+    {
+        var pack = PackDefinitionLoader.Load("""
+            slug: a
+            name: A
+            price: { amount: 100, currency: usd }
+            license: { file: LICENSE-custom.txt }
+            models:
+              - { slug: m, name: M, prompt: p }
+            """);
+
+        Assert.Equal(new LicenseChoice("custom", "LICENSE-custom.txt"), pack.License);
+        Assert.Empty(PackDefinitionValidator.Validate(pack));
+    }
+
+    [Theory]
+    [InlineData("category", "gadgets")]
+    [InlineData("style", "photoreal")]
+    [InlineData("license", "wtfpl")]
+    public void Unknown_category_style_or_license_is_reported(string field, string value)
+    {
+        var pack = field switch
+        {
+            "category" => Valid() with { Category = value },
+            "style" => Valid() with { Style = value },
+            _ => Valid() with { License = new LicenseChoice(value, null) },
+        };
+        Assert.Contains(PackDefinitionValidator.Validate(pack), e => e.Contains(field));
+    }
+
+    [Fact]
+    public void Invalid_tags_are_reported_at_pack_and_model_level()
+    {
+        var pack = Valid() with { Tags = ["ok", "Not Ok"] };
+        pack = pack with { Models = [pack.Models[0] with { Tags = ["fine", "bad_tag"] }] };
+
+        var errors = PackDefinitionValidator.Validate(pack);
+
+        Assert.Contains(errors, e => e.Contains("tags: tag 'Not Ok'"));
+        Assert.Contains(errors, e => e.Contains("models[treasure-chest].tags: tag 'bad_tag'"));
     }
 
     [Fact]

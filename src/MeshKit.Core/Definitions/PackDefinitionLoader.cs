@@ -55,7 +55,17 @@ public static class PackDefinitionLoader
             Slug: Require(m.Slug, $"models[{i}].slug"),
             Name: Require(m.Name, $"models[{i}].name"),
             Prompt: Require(m.Prompt, $"models[{i}].prompt"),
-            TexturePrompt: string.IsNullOrWhiteSpace(m.TexturePrompt) ? null : m.TexturePrompt)).ToList();
+            TexturePrompt: string.IsNullOrWhiteSpace(m.TexturePrompt) ? null : m.TexturePrompt,
+            Tags: NormalizeTags(m.Tags),
+            Category: string.IsNullOrWhiteSpace(m.Category) ? null : m.Category.Trim())).ToList();
+
+        var license = raw.License switch
+        {
+            null => LicenseChoice.Default,
+            { File: { Length: > 0 } file } => new LicenseChoice("custom", file.Trim()),
+            { Id: { Length: > 0 } id } => new LicenseChoice(id.Trim(), null),
+            _ => LicenseChoice.Default,
+        };
 
         return new PackDefinition(
             Slug: Require(raw.Slug, "slug"),
@@ -65,8 +75,15 @@ public static class PackDefinitionLoader
                 raw.Price?.Amount ?? throw new PackDefinitionException("Missing required field 'price.amount'."),
                 Require(raw.Price.Currency, "price.currency")),
             Generation: generation,
-            Models: models);
+            Models: models,
+            Tags: NormalizeTags(raw.Tags),
+            Category: raw.Category?.Trim() ?? "props",
+            Style: raw.Style?.Trim() ?? (generation.ModelType == "lowpoly" ? "lowpoly" : "stylized"),
+            License: license);
     }
+
+    private static IReadOnlyList<string> NormalizeTags(List<string>? tags) =>
+        (tags ?? []).Select(t => t.Trim().ToLowerInvariant()).Where(t => t.Length > 0).Distinct(StringComparer.Ordinal).ToList();
 
     private static string Require(string? value, string field) =>
         string.IsNullOrWhiteSpace(value)
@@ -82,6 +99,16 @@ public static class PackDefinitionLoader
         public PriceYaml? Price { get; set; }
         public GenerationYaml? Generation { get; set; }
         public List<ModelYaml>? Models { get; set; }
+        public List<string>? Tags { get; set; }
+        public string? Category { get; set; }
+        public string? Style { get; set; }
+        public LicenseYaml? License { get; set; }
+    }
+
+    private sealed class LicenseYaml
+    {
+        public string? Id { get; set; }
+        public string? File { get; set; }
     }
 
     private sealed class PriceYaml
@@ -107,5 +134,7 @@ public static class PackDefinitionLoader
         public string? Name { get; set; }
         public string? Prompt { get; set; }
         public string? TexturePrompt { get; set; }
+        public List<string>? Tags { get; set; }
+        public string? Category { get; set; }
     }
 }

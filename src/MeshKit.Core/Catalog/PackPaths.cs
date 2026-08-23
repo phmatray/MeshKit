@@ -57,6 +57,11 @@ public static class PackPaths
             }
         }
 
+        if (manifest.License is { } license)
+        {
+            offenders.AddRange(new[] { license.PublicFile, license.PrivateFile }.Where(p => !IsSafeRelative(p)));
+        }
+
         return offenders;
     }
 

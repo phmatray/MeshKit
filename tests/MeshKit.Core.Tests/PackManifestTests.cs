@@ -11,7 +11,11 @@ public class PackManifestTests
         Description: "Some props",
         Price: new Price(1900, "eur"),
         Generation: GenerationSettings.Default,
-        Models: [new ModelDefinition("chest", "Chest", "a chest", null), new ModelDefinition("barrel", "Barrel", "a barrel", null)]);
+        Models: [new ModelDefinition("chest", "Chest", "a chest", null, ["loot"], "furniture"), new ModelDefinition("barrel", "Barrel", "a barrel", null, [], null)],
+        Tags: ["fantasy"],
+        Category: "props",
+        Style: "lowpoly",
+        License: LicenseChoice.Default);
 
     [Fact]
     public void FromDefinition_creates_pending_entries_for_every_model()
@@ -24,6 +28,11 @@ public class PackManifestTests
         Assert.Equal(2, manifest.Models.Count);
         Assert.All(manifest.Models, m => Assert.Equal(ModelStatus.Pending, m.Status));
         Assert.False(manifest.IsSellable);
+        Assert.Equal(["fantasy"], manifest.TagList);
+        Assert.Equal(("props", "lowpoly"), (manifest.Category, manifest.Style));
+        Assert.Equal(["loot"], manifest.Models[0].TagList);
+        Assert.Equal("furniture", manifest.Models[0].Category);
+        Assert.Null(manifest.License);
     }
 
     [Fact]
@@ -40,8 +49,12 @@ public class PackManifestTests
                     Thumbnail: "public/thumbs/chest.png", Preview: "public/preview/chest.glb",
                     Files: [new ModelFile("glb", "private/chest/chest.glb", 1234)],
                     ConsumedCredits: 30,
-                    PreviewTextured: true),
+                    PreviewTextured: true,
+                    Tags: ["loot"],
+                    Category: "furniture",
+                    Metadata: new ModelMetadata(1200, 640, 1.2, 0.8, 0.9, true, "2k", ["base_color", "normal"], 123456)),
             ],
+            License = new PackLicense("meshkit-standard", "MeshKit Royalty-Free Licence", "public/LICENSE.txt", "private/LICENSE.txt"),
         };
 
         var json = PackManifestSerializer.Serialize(manifest);
@@ -51,6 +64,9 @@ public class PackManifestTests
         Assert.Contains("\"status\": \"succeeded\"", json);
         Assert.Contains("\"schemaVersion\": 1", json);
         Assert.Contains("\"previewTextured\": true", json);
+        Assert.Contains("\"triangles\": 1200", json);
+        Assert.Equal(1200, back.Models[0].Metadata!.Triangles);
+        Assert.Equal("private/LICENSE.txt", back.License!.PrivateFile);
     }
 
     [Fact]
@@ -119,8 +135,12 @@ public class PackManifestTests
             Files = [new ModelFile("glb", "/etc/passwd", 1)],
         };
 
-        var unsafePaths = PackPaths.UnsafePaths(manifest with { Models = [bad] });
+        var unsafePaths = PackPaths.UnsafePaths(manifest with
+        {
+            Models = [bad],
+            License = new PackLicense("x", "X", "../LICENSE.txt", "private/LICENSE.txt"),
+        });
 
-        Assert.Equal(["../evil.png", "/etc/passwd"], unsafePaths);
+        Assert.Equal(["../evil.png", "/etc/passwd", "../LICENSE.txt"], unsafePaths);
     }
 }

@@ -10,13 +10,33 @@ public sealed record PackDefinition(
     string Description,
     Price Price,
     GenerationSettings Generation,
-    IReadOnlyList<ModelDefinition> Models);
+    IReadOnlyList<ModelDefinition> Models,
+    IReadOnlyList<string> Tags,
+    string Category,
+    string Style,
+    LicenseChoice License);
 
+/// <param name="Tags">Model-level tags; pack tags are inherited by every model at index time.</param>
 public sealed record ModelDefinition(
     string Slug,
     string Name,
     string Prompt,
-    string? TexturePrompt);
+    string? TexturePrompt,
+    IReadOnlyList<string> Tags,
+    string? Category);
+
+/// <summary>
+/// Either a built-in template id (<see cref="MeshKitStandard"/>) or a path to a custom text file,
+/// relative to the pack definition. The pipeline writes the resolved text as <c>LICENSE.txt</c>.
+/// </summary>
+public sealed record LicenseChoice(string Id, string? File)
+{
+    public const string MeshKitStandard = "meshkit-standard";
+
+    public static readonly IReadOnlySet<string> BuiltIn = new HashSet<string>(StringComparer.Ordinal) { MeshKitStandard };
+
+    public static readonly LicenseChoice Default = new(MeshKitStandard, null);
+}
 
 /// <summary>Price in minor units (cents) with an ISO 4217 code in lowercase, as Stripe expects.</summary>
 public sealed record Price(long Amount, string Currency);
@@ -47,6 +67,13 @@ public sealed record GenerationSettings(
         TextureResolution: "2k",
         TargetFormats: ["glb"],
         Preview: PreviewTextured);
+
+    /// <summary>Free-form but bounded: the store facets on it, so typos would split the facet.</summary>
+    public static readonly IReadOnlySet<string> KnownCategories =
+        new HashSet<string>(StringComparer.Ordinal) { "props", "characters", "environment", "vehicles", "weapons", "architecture", "food", "nature", "furniture", "misc" };
+
+    public static readonly IReadOnlySet<string> KnownStyles =
+        new HashSet<string>(StringComparer.Ordinal) { "lowpoly", "stylized", "realistic", "voxel", "handpainted" };
 
     public static readonly IReadOnlySet<string> KnownPreviews =
         new HashSet<string>(StringComparer.Ordinal) { PreviewTextured, PreviewClay };

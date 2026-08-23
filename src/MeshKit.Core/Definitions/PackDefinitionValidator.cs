@@ -33,6 +33,23 @@ public static partial class PackDefinitionValidator
 
         ValidateGeneration(pack.Generation, errors);
 
+        if (!GenerationSettings.KnownCategories.Contains(pack.Category))
+        {
+            errors.Add($"category '{pack.Category}' is unknown (expected one of {Join(GenerationSettings.KnownCategories)}).");
+        }
+
+        if (!GenerationSettings.KnownStyles.Contains(pack.Style))
+        {
+            errors.Add($"style '{pack.Style}' is unknown (expected one of {Join(GenerationSettings.KnownStyles)}).");
+        }
+
+        ValidateTags(pack.Tags, "tags", errors);
+
+        if (pack.License.File is null && !LicenseChoice.BuiltIn.Contains(pack.License.Id))
+        {
+            errors.Add($"license.id '{pack.License.Id}' is unknown (expected one of {Join(LicenseChoice.BuiltIn)}, or license.file).");
+        }
+
         if (pack.Models.Count == 0)
         {
             errors.Add("A pack needs at least one model.");
@@ -55,6 +72,12 @@ public static partial class PackDefinitionValidator
                 errors.Add($"Model '{model.Slug}': prompt is {model.Prompt.Length} characters, Meshy allows at most {MaxPromptLength}.");
             }
 
+            ValidateTags(model.Tags, $"models[{model.Slug}].tags", errors);
+            if (model.Category is not null && !GenerationSettings.KnownCategories.Contains(model.Category))
+            {
+                errors.Add($"Model '{model.Slug}': category '{model.Category}' is unknown (expected one of {Join(GenerationSettings.KnownCategories)}).");
+            }
+
             if (model.TexturePrompt is { Length: > MaxPromptLength })
             {
                 errors.Add($"Model '{model.Slug}': texture_prompt is {model.TexturePrompt.Length} characters, Meshy allows at most {MaxPromptLength}.");
@@ -62,6 +85,21 @@ public static partial class PackDefinitionValidator
         }
 
         return errors;
+    }
+
+    public const int MaxTags = 20;
+
+    private static void ValidateTags(IReadOnlyList<string> tags, string field, List<string> errors)
+    {
+        if (tags.Count > MaxTags)
+        {
+            errors.Add($"{field}: at most {MaxTags} tags (got {tags.Count}).");
+        }
+
+        foreach (var tag in tags.Where(t => !Slug.IsValid(t)))
+        {
+            errors.Add($"{field}: tag '{tag}' is invalid: use lowercase letters, digits and single dashes.");
+        }
     }
 
     private static void ValidateGeneration(GenerationSettings gen, List<string> errors)

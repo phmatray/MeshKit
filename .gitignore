@@ -13,3 +13,6 @@ src/MeshKit.Web/wwwroot/js/model-viewer*.js
 .env
 *.db
 *.db-*
+
+# Claude Code agent worktrees
+.claude/worktrees/

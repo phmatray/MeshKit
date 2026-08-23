@@ -1,0 +1,90 @@
+@page "/3d-models/{Key}"
+@page "/free-3d-models"
+@inject ISearchService SearchService
+@inject ICatalogService Catalog
+@inject IOptions<MeshKitOptions> MeshKit
+@using MeshKit.Web.Landing
+@using MeshKit.Web.Search
+@using Microsoft.Extensions.Options
+
+@if (_collection is null)
+{
+    <PageTitle>Not found — MeshKit</PageTitle>
+    <h1 class="text-3xl font-bold">No such collection</h1>
+    <p class="mt-4"><a href="3d-models" class="underline">All 3D model collections</a></p>
+}
+else
+{
+    <PageTitle>@_collection.Title — MeshKit</PageTitle>
+    <Seo Title="@_collection.Title" Description="@Description" Path="@_collection.Path" Image="@OgImage" JsonLd="@JsonLd" />
+
+    <div class="space-y-12">
+        <header class="max-w-3xl">
+            <p class="text-xs font-semibold uppercase tracking-wide text-ink/50">@Format.Plural(_result.Total, "model") · @Format.Plural(_packs.Count, "pack")</p>
+            <h1 class="mt-1 text-4xl font-bold tracking-tight">@_collection.Headline</h1>
+            <p class="mt-4 text-lg text-ink/70">@_collection.Intro</p>
+            @if (_collection.Kind == CollectionKind.Free)
+            {
+                <p class="mt-4 text-sm text-ink/60">Download from the pack page of each model. <a href="account/register" class="underline">Create a free account</a> if you don't have one — no card, no newsletter unless you ask.</p>
+            }
+        </header>
+
+        <ModelGrid Hits="_result.Hits" Label="@_collection.Headline" />
+
+        @if (_packs.Count > 0)
+        {
+            <section aria-labelledby="packs-heading">
+                <h2 id="packs-heading" class="mb-4 text-xl font-bold">@(_collection.Kind == CollectionKind.Free ? "The packs these samples come from" : "Packs")</h2>
+                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    @foreach (var pack in _packs)
+                    {
+                        <PackCard Pack="pack" />
+                    }
+                </div>
+            </section>
+        }
+
+        <PackPromise />
+        <Faq Items="Collections.Faq" />
+
+        <nav aria-label="Other collections" class="text-sm text-ink/70">
+            <span class="font-semibold text-ink">Browse:</span>
+            @foreach (var other in Collections.Available(SearchService).Where(c => c.Path != _collection.Path))
+            {
+                <a href="@other.Path" class="ml-3 underline-offset-2 hover:text-coral-dark hover:underline">@other.Headline</a>
+            }
+        </nav>
+    </div>
+}
+
+@code {
+    [Parameter] public string? Key { get; set; }
+
+    private Collection? _collection;
+    private SearchResult _result = null!;
+    private List<PackManifest> _packs = [];
+
+    private string Description => $"{_collection!.Intro[..Math.Min(_collection.Intro.Length, 155)].TrimEnd()}…";
+
+    private string? OgImage => _result.Hits.FirstOrDefault(h => h.Thumbnail is not null) is { } h
+        ? $"{MeshKit.Value.PublicBaseUrl.TrimEnd('/')}{CatalogEndpoints.PublicUrl(h.PackSlug, h.Thumbnail!)}"
+        : null;
+
+    private string JsonLd => JsonLdBuilder.Collection(
+        MeshKit.Value.PublicBaseUrl.TrimEnd('/'), _collection!.Headline, Description, _collection.Path,
+        _result.Hits.Select(h => (h.Name, $"{MeshKit.Value.PublicBaseUrl.TrimEnd('/')}/packs/{h.PackSlug}?model={h.ModelSlug}",
+            h.Thumbnail is null ? null : $"{MeshKit.Value.PublicBaseUrl.TrimEnd('/')}{CatalogEndpoints.PublicUrl(h.PackSlug, h.Thumbnail)}")),
+        Collections.Faq);
+
+    protected override void OnParametersSet()
+    {
+        _collection = Key is null ? (Collections.Available(SearchService).Contains(Collections.Free) ? Collections.Free : null) : Collections.Resolve(Key, SearchService);
+        if (_collection is null)
+        {
+            return;
+        }
+
+        _result = SearchService.Search(Collections.QueryFor(_collection));
+        _packs = _result.Hits.Select(h => h.PackSlug).Distinct().Select(Catalog.Find).OfType<PackManifest>().ToList();
+    }
+}

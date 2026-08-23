@@ -1,0 +1,17 @@
+@* Visible FAQ mirroring the FAQPage JSON-LD. *@
+<section aria-labelledby="faq-heading">
+    <h2 id="faq-heading" class="text-xl font-bold">Questions buyers ask</h2>
+    <dl class="mt-4 divide-y divide-ink/10 rounded-2xl border border-ink/10 bg-white">
+        @foreach (var (question, answer) in Items)
+        {
+            <div class="px-5 py-4">
+                <dt class="font-semibold">@question</dt>
+                <dd class="mt-1 text-sm text-ink/70">@answer</dd>
+            </div>
+        }
+    </dl>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public required IReadOnlyList<(string Question, string Answer)> Items { get; set; }
+}

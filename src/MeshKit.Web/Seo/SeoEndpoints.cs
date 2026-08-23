@@ -20,7 +20,7 @@ public static class SeoEndpoints
 
                 """, "text/plain"));
 
-        app.MapGet("/sitemap.xml", (ICatalogService catalog, IOptions<MeshKitOptions> options) =>
+        app.MapGet("/sitemap.xml", (ICatalogService catalog, Search.ISearchService search, IOptions<MeshKitOptions> options) =>
         {
             var baseUrl = options.Value.PublicBaseUrl.TrimEnd('/');
             var sb = new StringBuilder();
@@ -39,6 +39,12 @@ public static class SeoEndpoints
             Url("", "weekly", "1.0");
             Url("packs", "weekly", "0.9");
             Url("search", "weekly", "0.6");
+            Url("3d-models", "weekly", "0.7");
+            foreach (var collection in Landing.Collections.Available(search))
+            {
+                Url(collection.Path, "weekly", collection.Kind == Landing.CollectionKind.Free ? "0.9" : "0.7");
+            }
+
             Url("legal/terms", "yearly", "0.2");
             Url("legal/privacy", "yearly", "0.2");
             Url("legal/licence", "yearly", "0.3");

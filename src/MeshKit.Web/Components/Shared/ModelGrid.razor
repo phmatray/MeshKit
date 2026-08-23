@@ -1,0 +1,39 @@
+@* Model cards shared by the search page and the landing pages. *@
+@using MeshKit.Web.Search
+<ul class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3" aria-label="@Label">
+    @foreach (var hit in Hits)
+    {
+        <li class="flex flex-col overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+            <a href="packs/@hit.PackSlug?model=@hit.ModelSlug" class="block aspect-square bg-white">
+                @if (hit.Thumbnail is not null)
+                {
+                    <img src="@CatalogEndpoints.PublicUrl(hit.PackSlug, hit.Thumbnail)" alt="@hit.Name" loading="lazy" class="h-full w-full object-contain p-3" />
+                }
+            </a>
+            <div class="flex flex-1 flex-col gap-2 p-4">
+                <h3 class="flex items-center gap-2 font-semibold leading-tight">
+                    <a href="packs/@hit.PackSlug?model=@hit.ModelSlug" class="hover:text-coral-dark">@hit.Name</a>
+                    @if (hit.IsFree)
+                    {
+                        <span class="rounded-full bg-coral px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink">Free</span>
+                    }
+                </h3>
+                <p class="text-xs text-ink/60">in <a href="packs/@hit.PackSlug" class="underline-offset-2 hover:underline">@hit.PackName</a> · @Money.Format(hit.PriceAmount, hit.PriceCurrency)</p>
+                <p class="text-xs text-ink/60">
+                    @(hit.Triangles is { } t ? $"{Format.Count(t)} tris · " : "")<span class="uppercase">@string.Join(" · ", hit.Formats)</span>
+                </p>
+                <ul class="mt-auto flex flex-wrap gap-1 pt-1" aria-label="Tags">
+                    @foreach (var tag in hit.Tags.Take(4))
+                    {
+                        <li><TagChip Tag="@tag" /></li>
+                    }
+                </ul>
+            </div>
+        </li>
+    }
+</ul>
+
+@code {
+    [Parameter, EditorRequired] public required IReadOnlyList<SearchHit> Hits { get; set; }
+    [Parameter] public string Label { get; set; } = "Models";
+}

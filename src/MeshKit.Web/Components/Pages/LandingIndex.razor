@@ -1,0 +1,26 @@
+@page "/3d-models"
+@inject ISearchService SearchService
+@using MeshKit.Web.Landing
+@using MeshKit.Web.Search
+
+<PageTitle>3D model collections — MeshKit</PageTitle>
+<Seo Title="3D model collections by category and style" Description="Game-ready 3D models by category (props, nature, weapons…) and style (low-poly, stylized…), plus one free sample per pack. PBR textures, LODs, real-world scale." Path="3d-models" />
+
+<h1 class="text-3xl font-bold">3D models by category and style</h1>
+<p class="mt-2 max-w-2xl text-ink/70">Every model in the catalogue, grouped the way people look for them. Each collection lists the models, the packs they come from and what a MeshKit pack guarantees.</p>
+
+<ul class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Collections">
+    @foreach (var c in Collections.Available(SearchService))
+    {
+        var count = SearchService.Search(Collections.QueryFor(c, 1)).Total;
+        <li>
+            <a href="@c.Path" class="block h-full rounded-2xl border border-ink/10 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-md">
+                <p class="text-xs font-semibold uppercase tracking-wide text-ink/50">@(c.Kind == CollectionKind.Free ? "Free" : c.Kind == CollectionKind.Category ? "Category" : "Style") · @Format.Plural(count, "model")</p>
+                <h2 class="mt-1 text-lg font-semibold">@c.Headline</h2>
+                <p class="mt-2 line-clamp-3 text-sm text-ink/70">@c.Intro</p>
+            </a>
+        </li>
+    }
+</ul>
+
+<div class="mt-12"><PackPromise /></div>

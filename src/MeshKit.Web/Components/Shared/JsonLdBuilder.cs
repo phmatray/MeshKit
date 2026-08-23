@@ -51,6 +51,42 @@ public static class JsonLdBuilder
         },
     });
 
+    /// <summary>A landing page: a list of the models it shows, plus its FAQ.</summary>
+    public static string Collection(string baseUrl, string name, string description, string path, IEnumerable<(string Name, string Url, string? Image)> items, IEnumerable<(string Question, string Answer)> faq) => Serialize(new object[]
+    {
+        new
+        {
+            context = "https://schema.org",
+            type = "CollectionPage",
+            name,
+            description,
+            url = $"{baseUrl}/{path}",
+            mainEntity = new
+            {
+                type = "ItemList",
+                itemListElement = items.Select((item, i) => new
+                {
+                    type = "ListItem",
+                    position = i + 1,
+                    name = item.Name,
+                    url = item.Url,
+                    image = item.Image,
+                }).ToList(),
+            },
+        },
+        new
+        {
+            context = "https://schema.org",
+            type = "FAQPage",
+            mainEntity = faq.Select(f => new
+            {
+                type = "Question",
+                name = f.Question,
+                acceptedAnswer = new { type = "Answer", text = f.Answer },
+            }).ToList(),
+        },
+    });
+
     private static string Serialize(object value)
     {
         // "@context"/"@type" cannot be C# property names: rename after serialising.

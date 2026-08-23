@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject NavigationManager Navigation
+@inject Search.ISearchService SearchService
 
 <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-ink focus:px-3 focus:py-2 focus:text-cream">Skip to content</a>
 
@@ -39,11 +40,22 @@
 </main>
 
 <footer class="border-t border-ink/10 bg-white/40">
-    <div class="mx-auto grid max-w-6xl gap-8 px-6 py-10 text-sm text-ink/70 md:grid-cols-3">
+    <div class="mx-auto grid max-w-6xl gap-8 px-6 py-10 text-sm text-ink/70 md:grid-cols-4">
         <div class="space-y-2">
             <Logo Size="24" />
             <p>Game-ready 3D model packs, generated with Meshy and curated by hand. Payments by Stripe.</p>
         </div>
+        <nav aria-label="Browse" class="space-y-1">
+            <h2 class="font-semibold text-ink">Browse</h2>
+            <ul class="space-y-1">
+                <li><a href="free-3d-models" class="hover:text-coral-dark">Free 3D models</a></li>
+                @foreach (var c in Landing.Collections.Available(SearchService).Where(c => c.Kind != Landing.CollectionKind.Free).Take(8))
+                {
+                    <li><a href="@c.Path" class="hover:text-coral-dark">@c.Headline</a></li>
+                }
+                <li><a href="3d-models" class="hover:text-coral-dark">All collections</a></li>
+            </ul>
+        </nav>
         <nav aria-label="Legal" class="space-y-1">
             <h2 class="font-semibold text-ink">Legal</h2>
             <ul class="space-y-1">

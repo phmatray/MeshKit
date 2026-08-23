@@ -77,6 +77,8 @@ buyers). The store refuses any manifest whose paths escape `public/` or `private
 
 ## Deploying the store
 
+The production instance (https://meshkit.atypical.consulting) is described in [DEPLOYMENT.md](DEPLOYMENT.md). For your own host:
+
 ```bash
 cp .env.example .env            # Stripe keys, public URL, ingest token
 mkdir -p data catalog && sudo chown -R 1001:1001 data catalog   # the container runs as uid 1001

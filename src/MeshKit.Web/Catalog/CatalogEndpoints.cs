@@ -17,7 +17,8 @@ public static class CatalogEndpoints
     /// <summary>Serves <c>public/</c> files of a pack (thumbnails, untextured previews). Anything else 404s.</summary>
     public static IEndpointRouteBuilder MapCatalogEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/catalog/{slug}/public/{**path}", (string slug, string path, ICatalogService catalog, HttpResponse response) =>
+        // GET and HEAD: CDNs, link checkers and <model-viewer> preflights all HEAD these assets.
+        app.MapMethods("/catalog/{slug}/public/{**path}", [HttpMethods.Get, HttpMethods.Head], (string slug, string path, ICatalogService catalog, HttpResponse response) =>
         {
             var file = catalog.PublicFile(slug, path);
             if (file is null)

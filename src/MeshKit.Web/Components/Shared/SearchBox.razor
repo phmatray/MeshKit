@@ -1,9 +1,9 @@
 @* GET form: the URL is the query, so results are linkable and the back button works. *@
 <form action="search" method="get" role="search" class="@Class">
-    <label for="q" class="sr-only">Search models</label>
+    <label for="@Id" class="sr-only">Search models</label>
     <div class="relative">
         <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/50" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="m14 14 4 4"/></svg>
-        <input id="q" name="q" type="search" value="@Value" placeholder="@Placeholder" autocomplete="off"
+        <input id="@Id" name="q" type="search" value="@Value" placeholder="@Placeholder" autocomplete="off"
                class="w-full rounded-full border border-ink/15 bg-white py-2 pl-9 pr-4 text-sm placeholder:text-ink/40 focus:border-coral-dark" />
     </div>
 </form>
@@ -14,4 +14,7 @@
     [Parameter] public string Placeholder { get; set; } = "Search models, tags…";
 
     [Parameter] public string Class { get; set; } = "w-full max-w-xs";
+
+    /// <summary>Element id — must differ when two boxes share a page (the search page has one in the header and one in the body).</summary>
+    [Parameter] public string Id { get; set; } = "q";
 }

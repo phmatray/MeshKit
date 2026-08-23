@@ -22,8 +22,10 @@ else
          ImageAlt="@($"{Selected.Name} from {Pack.Name}")"
          JsonLd="@JsonLdBuilder.Product(MeshKit.Value.PublicBaseUrl.TrimEnd('/'), Pack, OgImage)" />
 
-    <div class="grid gap-10 lg:grid-cols-[1.2fr_1fr]">
-        <section aria-label="3D preview" class="space-y-4">
+    @* Three grid cells: on phones the header (title, stats, Buy) comes first, then the viewer, then
+       the contents list; from lg up the viewer spans both rows on the left and the two others stack on the right. *@
+    <div class="grid gap-x-10 gap-y-8 lg:grid-cols-[1.2fr_1fr] lg:grid-rows-[auto_1fr]">
+        <section aria-label="3D preview" class="space-y-4 lg:col-start-1 lg:row-span-2 lg:row-start-1">
             <ModelStage Src="@CatalogEndpoints.PublicUrl(Pack.Slug, Selected.Preview!)"
                         Poster="@(Selected.Thumbnail is null ? null : CatalogEndpoints.PublicUrl(Pack.Slug, Selected.Thumbnail))"
                         Alt="@($"3D preview of {Selected.Name}")"
@@ -48,7 +50,7 @@ else
                 <dl class="grid grid-cols-2 gap-x-6 gap-y-2 rounded-2xl border border-ink/10 bg-white px-5 py-4 text-sm sm:grid-cols-4" aria-label="Model specifications">
                     <div><dt class="text-ink/50">Triangles</dt><dd class="font-semibold tabular-nums">@Format.Count(meta.Triangles)</dd></div>
                     <div><dt class="text-ink/50">Vertices</dt><dd class="font-semibold tabular-nums">@Format.Count(meta.Vertices)</dd></div>
-                    <div><dt class="text-ink/50">Size (W×H×D)</dt><dd class="font-semibold tabular-nums">@Format.Metres(meta.Width) × @Format.Metres(meta.Height) × @Format.Metres(meta.Depth) m</dd></div>
+                    <div><dt class="text-ink/50">Size (W×H×D)</dt><dd class="font-semibold tabular-nums">@Format.Metres(meta.Width) × @Format.Metres(meta.Height) × @Format.Metres(meta.Depth)&nbsp;m</dd></div>
                     <div><dt class="text-ink/50">Textures</dt><dd class="font-semibold">@(meta.TextureMaps.Count > 0 ? $"{meta.TextureMaps.Count} maps · {meta.TextureResolution}{(meta.Pbr ? " PBR" : "")}" : "none")</dd></div>
                 </dl>
             }
@@ -70,7 +72,7 @@ else
             </ul>
         </section>
 
-        <section class="space-y-6">
+        <section class="order-first space-y-6 lg:order-none lg:col-start-2 lg:row-start-1">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-wide text-ink/50">@Pack.Category · @Pack.Style</p>
                 <h1 class="text-3xl font-bold">@Pack.Name</h1>
@@ -104,7 +106,10 @@ else
                 </p>
             }
 
-            <h2 class="pt-4 text-lg font-semibold">What's inside</h2>
+        </section>
+
+        <section aria-labelledby="inside" class="space-y-4 lg:col-start-2 lg:row-start-2">
+            <h2 id="inside" class="text-lg font-semibold">What's inside</h2>
             <ul class="divide-y divide-ink/10 rounded-2xl border border-ink/10 bg-white">
                 @foreach (var model in Pack.Models)
                 {
@@ -126,7 +131,11 @@ else
 }
 
 @code {
+    /// <summary>Mesh files that count as deliverables (texture maps are listed as files too but aren't formats).</summary>
     private static readonly HashSet<string> GenerationFormats = ["glb", "fbx", "obj", "mtl", "usdz", "stl", "3mf"];
+
+    /// <summary>What the "Formats" stat shows: <c>mtl</c> is the OBJ material sidecar, not a format a buyer picks.</summary>
+    private static readonly HashSet<string> DisplayFormats = ["glb", "fbx", "obj", "usdz", "stl", "3mf"];
 
     [Parameter] public required string Slug { get; set; }
 
@@ -136,7 +145,7 @@ else
 
     private ModelEntry Selected => Pack!.Models.FirstOrDefault(m => m.Slug == ModelSlug && m.Preview is not null) ?? Pack!.Models.First(m => m.Preview is not null);
 
-    private IEnumerable<string> Formats => Pack!.Models.SelectMany(m => m.Files.Select(f => f.Format)).Where(GenerationFormats.Contains).Distinct().Order();
+    private IEnumerable<string> Formats => Pack!.Models.SelectMany(m => m.Files.Select(f => f.Format)).Where(DisplayFormats.Contains).Distinct().Order();
 
     private string TriangleRange
     {

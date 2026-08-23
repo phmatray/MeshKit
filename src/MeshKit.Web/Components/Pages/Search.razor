@@ -13,11 +13,17 @@
         <h1 class="text-3xl font-bold">@(string.IsNullOrWhiteSpace(Q) ? "All models" : $"“{Q}”")</h1>
         <p class="mt-1 text-ink/60">@Format.Count(Result.Total) model@(Result.Total == 1 ? "" : "s")@(Query.HasFilters ? " match" : "")</p>
     </div>
-    <SearchBox Value="@Q" Class="w-full md:w-96" />
+    <SearchBox Id="search-q" Value="@Q" Class="w-full md:w-96" />
 </div>
 
 <div class="grid gap-8 lg:grid-cols-[15rem_1fr]">
-    <aside aria-label="Filters" class="space-y-6 text-sm">
+    <aside aria-label="Filters" class="text-sm">
+        <input type="checkbox" id="filters-toggle" class="peer sr-only lg:hidden" />
+        <label for="filters-toggle" class="flex cursor-pointer items-center justify-between rounded-full border border-ink/15 bg-white px-4 py-2 font-semibold lg:hidden">
+            <span>Filters@(Query.HasFilters ? " · active" : "")</span>
+            <span aria-hidden="true">▾</span>
+        </label>
+        <div class="mt-4 hidden space-y-6 peer-checked:block lg:mt-0 lg:block">
         @if (Query.HasFilters)
         {
             <a href="search" class="inline-block text-coral-dark underline">Clear all filters</a>
@@ -49,14 +55,15 @@
                 }
             </ul>
         </section>
+        </div>
     </aside>
 
     <section aria-label="Results">
-        <div class="mb-4 flex items-center justify-end gap-2 text-sm text-ink/70">
-            <span>Sort</span>
+        <div class="-mx-1 mb-4 flex items-center gap-2 overflow-x-auto px-1 text-sm text-ink/70 lg:justify-end">
+            <span class="shrink-0">Sort</span>
             @foreach (var (label, sort) in new[] { ("Relevance", SearchSort.Relevance), ("Name", SearchSort.Name), ("Fewest tris", SearchSort.TrianglesAsc), ("Price", SearchSort.PriceAsc) })
             {
-                <a href="@Link(Query with { Sort = sort, Page = 1 })" class="rounded-full px-3 py-1 @(Query.Sort == sort ? "bg-ink text-cream" : "hover:bg-ink/5")" aria-current="@(Query.Sort == sort ? "true" : null)">@label</a>
+                <a href="@Link(Query with { Sort = sort, Page = 1 })" class="whitespace-nowrap rounded-full px-3 py-1 @(Query.Sort == sort ? "bg-ink text-cream" : "hover:bg-ink/5")" aria-current="@(Query.Sort == sort ? "true" : null)">@label</a>
             }
         </div>
 

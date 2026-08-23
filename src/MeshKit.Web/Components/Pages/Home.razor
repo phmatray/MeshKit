@@ -33,7 +33,7 @@
     <section class="mt-12" aria-labelledby="latest">
         <h2 id="latest" class="mb-6 text-2xl font-bold">Latest packs</h2>
         <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            @foreach (var pack in Catalog.Sellable.Take(3))
+            @foreach (var pack in Latest.Take(3))
             {
                 <PackCard Pack="pack" />
             }
@@ -42,6 +42,9 @@
 }
 
 @code {
+    // Newest pack first: the catalogue itself is alphabetical, which put the sample pack in the hero.
+    private IEnumerable<PackManifest> Latest => Catalog.Sellable.OrderByDescending(p => p.GeneratedAt);
+
     private (string Slug, string Name, string Preview, string? Thumbnail)? Featured =>
-        Catalog.Sellable.SelectMany(p => p.Models.Where(m => m.Preview is not null).Select(m => (p.Slug, m.Name, m.Preview!, m.Thumbnail))).FirstOrDefault() is { Slug: not null } f ? f : null;
+        Latest.SelectMany(p => p.Models.Where(m => m.Preview is not null).Select(m => (p.Slug, m.Name, m.Preview!, m.Thumbnail))).FirstOrDefault() is { Slug: not null } f ? f : null;
 }

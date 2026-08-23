@@ -52,6 +52,10 @@ else
                     <div><dt class="text-ink/50">Vertices</dt><dd class="font-semibold tabular-nums">@Format.Count(meta.Vertices)</dd></div>
                     <div><dt class="text-ink/50">Size (W×H×D)</dt><dd class="font-semibold tabular-nums">@Format.Metres(meta.Width) × @Format.Metres(meta.Height) × @Format.Metres(meta.Depth)&nbsp;m</dd></div>
                     <div><dt class="text-ink/50">Textures</dt><dd class="font-semibold">@(meta.TextureMaps.Count > 0 ? $"{meta.TextureMaps.Count} maps · {meta.TextureResolution}{(meta.Pbr ? " PBR" : "")}" : "none")</dd></div>
+                    @if (Selected.LodList.Count > 0)
+                    {
+                        <div class="col-span-2 sm:col-span-4"><dt class="text-ink/50">LODs</dt><dd class="font-semibold tabular-nums">@Format.Count(meta.Triangles) → @string.Join(" → ", Selected.LodList.Select(l => l.Triangles is { } t ? Format.Count(t) : $"≤{Format.Count(l.TargetPolycount)}")) tris <span class="font-normal text-ink/50">(lod1–lod@(Selected.LodList.Count) shipped next to the full model)</span></dd></div>
+                    }
                 </dl>
             }
             <ul class="grid grid-cols-4 gap-3 sm:grid-cols-6" aria-label="Models in this pack">
@@ -86,7 +90,11 @@ else
                 <div><dt class="text-ink/60">Models</dt><dd class="text-lg font-semibold">@Pack.Models.Count</dd></div>
                 <div><dt class="text-ink/60">Formats</dt><dd class="text-lg font-semibold uppercase">@string.Join(" · ", Formats)</dd></div>
                 <div><dt class="text-ink/60">Polygons</dt><dd class="text-lg font-semibold tabular-nums">@TriangleRange</dd></div>
-                <div><dt class="text-ink/60">Download</dt><dd class="text-lg font-semibold">@Format.Bytes(Pack.Models.Sum(m => m.Metadata?.TotalBytes ?? m.Files.Sum(f => f.Bytes)))</dd></div>
+                <div><dt class="text-ink/60">Download</dt><dd class="text-lg font-semibold">@Format.Bytes(Pack.Models.Sum(m => m.AllFiles.Sum(f => f.Bytes)))</dd></div>
+                @if (LodCount > 0)
+                {
+                    <div class="col-span-2"><dt class="text-ink/60">Levels of detail</dt><dd class="text-lg font-semibold">Full model + @Format.Plural(LodCount, "LOD") per model</dd></div>
+                }
             </dl>
 
             @if (Owned)
@@ -153,7 +161,7 @@ else
                                 <span class="rounded-full bg-coral px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink">Free</span>
                             }
                         </span>
-                        <span class="text-ink/50 tabular-nums">@(model.Metadata is { } m ? $"{Format.Count(m.Triangles)} tris · " : "")@model.Files.Count(f => GenerationFormats.Contains(f.Format)) files</span>
+                        <span class="text-ink/50 tabular-nums">@(model.Metadata is { } m ? $"{Format.Count(m.Triangles)} tris · " : "")@model.Files.Count(f => GenerationFormats.Contains(f.Format)) files@(model.LodList.Count > 0 ? $" · {Format.Plural(model.LodList.Count, "LOD")}" : "")</span>
                     </li>
                 }
                 @if (Pack.License is not null)
@@ -184,6 +192,9 @@ else
     private ModelEntry Selected => Pack!.Models.FirstOrDefault(m => m.Slug == ModelSlug && m.Preview is not null) ?? Pack!.Models.First(m => m.Preview is not null);
 
     private IEnumerable<string> Formats => Pack!.Models.SelectMany(m => m.Files.Select(f => f.Format)).Where(DisplayFormats.Contains).Distinct().Order();
+
+    /// <summary>LODs per model when every model has the same number (the normal case), else the minimum.</summary>
+    private int LodCount => Pack!.Models.Count == 0 ? 0 : Pack.Models.Min(m => m.LodList.Count);
 
     private string TriangleRange
     {

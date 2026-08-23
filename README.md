@@ -50,6 +50,7 @@ generation:
   auto_size: true                                # real-world scale, pivot at origin_at (bottom | center)
   alpha_thumbnail: true                          # transparent thumbnails (default)
   ultra_mode: false                              # +5 credits/model; per-model override: `ultra: true`
+  lods: [2000, 800]                              # optional, up to 3 levels below target_polycount: Meshy Remesh, 5 credits each
   texture_image: palette.png                     # optional, relative to this file: one reference image for the whole pack
   enable_pbr: true
   texture_resolution: 2k                         # 2k | 4k | 8k
@@ -61,6 +62,10 @@ models:
     texture_prompt: weathered oak planks, rusted iron bands   # optional; replaces texture_image for this model
     ultra: true                                               # optional; hero pieces only
 ```
+
+LODs are a separate, resumable stage: re-running the workflow (without `regenerate`) on an existing pack adds
+the missing levels from the refine task — no model is regenerated, 5 credits per level. They ship as
+`private/<model>/lod1/<model>_lod1.<fmt>` next to the full model and are listed on the pack page.
 
 The free in-browser previews are shrunk by `tools/optimize-previews.sh` (textures capped at 1k and
 re-encoded as WebP, geometry untouched — ≈0.4 MB instead of 7 MB per model). The workflow runs it after

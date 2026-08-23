@@ -156,6 +156,30 @@ public static partial class PackDefinitionValidator
             errors.Add($"generation.ultra_mode needs ai_model 'latest' or 'meshy-7' (got '{gen.AiModel}').");
         }
 
+        var lods = gen.LodLevels;
+        if (lods.Count > GenerationSettings.MaxLods)
+        {
+            errors.Add($"generation.lods: at most {GenerationSettings.MaxLods} levels (got {lods.Count}).");
+        }
+
+        if (lods.Distinct().Count() != lods.Count)
+        {
+            errors.Add("generation.lods: levels must be distinct.");
+        }
+
+        foreach (var lod in lods.Where(l => l < 100))
+        {
+            errors.Add($"generation.lods: level {lod} is below Meshy's minimum of 100 polygons.");
+        }
+
+        if (gen.TargetPolycount is { } budget)
+        {
+            foreach (var lod in lods.Where(l => l >= budget))
+            {
+                errors.Add($"generation.lods: level {lod} is not below target_polycount {budget}; a LOD must be lighter than the full model.");
+            }
+        }
+
         if (gen.TextureImage is { } image && !IsRelativeInsideDefinitionDirectory(image))
         {
             errors.Add($"generation.texture_image '{image}' must be a relative path inside the packs directory (no '..', no absolute path).");

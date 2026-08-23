@@ -36,6 +36,26 @@ public class PackManifestTests
     }
 
     [Fact]
+    public void Lods_round_trip_and_AllFiles_includes_them()
+    {
+        var entry = PackManifest.FromDefinition(Definition(), DateTimeOffset.UnixEpoch).Models[0] with
+        {
+            Status = ModelStatus.Succeeded,
+            Files = [new ModelFile("glb", "private/chest/chest.glb", 10)],
+            Lods = [new ModelLod(1, 2000, "lod-1", [new ModelFile("glb", "private/chest/lod1/chest_lod1.glb", 5)], 1990, 5)],
+        };
+        var manifest = PackManifest.FromDefinition(Definition(), DateTimeOffset.UnixEpoch) with { Models = [entry] };
+
+        var back = PackManifestSerializer.Deserialize(PackManifestSerializer.Serialize(manifest));
+
+        Assert.Equal(manifest, back);
+        var lod = Assert.Single(back.Models[0].LodList);
+        Assert.Equal((1, 2000, 1990, 5), (lod.Level, lod.TargetPolycount, lod.Triangles, lod.ConsumedCredits));
+        Assert.Equal(["private/chest/chest.glb", "private/chest/lod1/chest_lod1.glb"], back.Models[0].AllFiles.Select(f => f.Path));
+        Assert.NotEqual(manifest, manifest with { Models = [entry with { Lods = null }] });
+    }
+
+    [Fact]
     public void Json_round_trip_preserves_everything()
     {
         var manifest = PackManifest.FromDefinition(Definition() with { Sample = "chest" }, DateTimeOffset.UnixEpoch) with

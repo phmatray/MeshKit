@@ -110,9 +110,16 @@ public sealed record ModelEntry(
     bool PreviewTextured = false,
     IReadOnlyList<string>? Tags = null,
     string? Category = null,
-    ModelMetadata? Metadata = null)
+    ModelMetadata? Metadata = null,
+    IReadOnlyList<ModelLod>? Lods = null)
 {
     public IReadOnlyList<string> TagList => Tags ?? [];
+
+    /// <summary>Lighter remeshed copies of the full model, heaviest first. Empty when the pack defines no LODs.</summary>
+    public IReadOnlyList<ModelLod> LodList => Lods ?? [];
+
+    /// <summary>Every downloadable file: the full model's plus every LOD's.</summary>
+    public IEnumerable<ModelFile> AllFiles => Files.Concat(LodList.SelectMany(l => l.Files));
 
     public static ModelEntry Pending(ModelDefinition model) => new(
         Slug: model.Slug,
@@ -147,9 +154,23 @@ public sealed record ModelEntry(
         && TagList.SequenceEqual(other.TagList)
         && Category == other.Category
         && Equals(Metadata, other.Metadata)
-        && Files.SequenceEqual(other.Files);
+        && Files.SequenceEqual(other.Files)
+        && LodList.SequenceEqual(other.LodList);
 
     public override int GetHashCode() => HashCode.Combine(Slug, Status, Files.Count);
+}
+
+/// <summary>
+/// One LOD: the refined model remeshed by Meshy to <paramref name="TargetPolycount"/>. <paramref name="Level"/> is
+/// 1-based, heaviest first (lod1 is the first step down from the full model).
+/// </summary>
+public sealed record ModelLod(int Level, int TargetPolycount, string TaskId, IReadOnlyList<ModelFile> Files, int? Triangles, int ConsumedCredits)
+{
+    public bool Equals(ModelLod? other) =>
+        other is not null && Level == other.Level && TargetPolycount == other.TargetPolycount && TaskId == other.TaskId
+        && Triangles == other.Triangles && ConsumedCredits == other.ConsumedCredits && Files.SequenceEqual(other.Files);
+
+    public override int GetHashCode() => HashCode.Combine(Level, TargetPolycount, TaskId);
 }
 
 /// <summary>One downloadable file of a model: <c>format</c> is the Meshy key (glb, fbx, obj, mtl, usdz, stl, 3mf).</summary>

@@ -90,6 +90,28 @@ public class MeshyClientTests
     }
 
     [Fact]
+    public async Task CreateRemesh_posts_to_the_remesh_path_and_polls_it()
+    {
+        var (client, handler) = Create();
+        handler.Enqueue(HttpStatusCode.Accepted, """{"result":"remesh-1"}""");
+        handler.Enqueue(HttpStatusCode.OK, """{"id":"remesh-1","type":"remesh","status":"SUCCEEDED","progress":100,"model_urls":{"glb":"https://cdn/lod.glb"},"consumed_credits":5}""");
+
+        var id = await client.CreateRemeshAsync(new RemeshRequest("task-2", ["glb", "fbx"], "triangle", 2000), CancellationToken.None);
+        var task = await client.GetTaskAsync(id, CancellationToken.None, MeshyTaskKind.Remesh);
+
+        Assert.Equal("remesh-1", id);
+        Assert.Equal("https://api.meshy.ai/openapi/v1/remesh", handler.Requests[0].Request.RequestUri!.ToString());
+        using var doc = JsonDocument.Parse(handler.Requests[0].Body!);
+        Assert.Equal("task-2", doc.RootElement.GetProperty("input_task_id").GetString());
+        Assert.Equal("triangle", doc.RootElement.GetProperty("topology").GetString());
+        Assert.Equal(2000, doc.RootElement.GetProperty("target_polycount").GetInt32());
+        Assert.Equal(2, doc.RootElement.GetProperty("target_formats").GetArrayLength());
+        Assert.Equal("https://api.meshy.ai/openapi/v1/remesh/remesh-1", handler.Requests[1].Request.RequestUri!.ToString());
+        Assert.Equal(MeshyTaskStatus.Succeeded, task.Status);
+        Assert.Equal(5, task.ConsumedCredits);
+    }
+
+    [Fact]
     public async Task CreatePreview_omits_null_polycount()
     {
         var (client, handler) = Create();

@@ -83,7 +83,7 @@ public sealed class CatalogService : ICatalogService
 
         // Only paths the manifest declares, never a directory walk: the manifest is what was validated at load.
         var privateRoot = Path.Combine(pack.Directory, PackPaths.PrivateRoot);
-        var files = model.Files.Select(f => f.Path).ToList();
+        var files = model.AllFiles.Select(f => f.Path).ToList();
         if (pack.Manifest.License?.PrivateFile is { } licence)
         {
             files.Add(licence);

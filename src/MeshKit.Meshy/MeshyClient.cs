@@ -14,6 +14,7 @@ namespace MeshKit.Meshy;
 public sealed class MeshyClient(HttpClient http, MeshyOptions options, ILogger<MeshyClient> logger, TimeProvider? timeProvider = null) : IMeshyClient
 {
     private const string TextTo3dPath = "/openapi/v2/text-to-3d";
+    private const string RemeshPath = "/openapi/v1/remesh";
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -62,22 +63,36 @@ public sealed class MeshyClient(HttpClient http, MeshyOptions options, ILogger<M
         return await CreateTaskAsync(body, cancellationToken);
     }
 
-    public async Task<MeshyTask> GetTaskAsync(string taskId, CancellationToken cancellationToken)
+    public async Task<string> CreateRemeshAsync(RemeshRequest request, CancellationToken cancellationToken)
+    {
+        var body = new
+        {
+            input_task_id = request.InputTaskId,
+            target_formats = request.TargetFormats,
+            topology = request.Topology,
+            target_polycount = request.TargetPolycount,
+        };
+        return await CreateTaskAsync(body, cancellationToken, RemeshPath);
+    }
+
+    private static string PathFor(MeshyTaskKind kind) => kind == MeshyTaskKind.Remesh ? RemeshPath : TextTo3dPath;
+
+    public async Task<MeshyTask> GetTaskAsync(string taskId, CancellationToken cancellationToken, MeshyTaskKind kind = MeshyTaskKind.TextTo3d)
     {
         using var response = await SendWithRetryAsync(
-            () => ApiRequest(HttpMethod.Get, $"{TextTo3dPath}/{Uri.EscapeDataString(taskId)}"), cancellationToken);
+            () => ApiRequest(HttpMethod.Get, $"{PathFor(kind)}/{Uri.EscapeDataString(taskId)}"), cancellationToken);
         var dto = await response.Content.ReadFromJsonAsync<TaskDto>(Json, cancellationToken)
             ?? throw new MeshyApiException(response.StatusCode, "Empty task response.");
         return dto.ToTask();
     }
 
-    public async Task<MeshyTask> WaitForTaskAsync(string taskId, TimeSpan pollInterval, TimeSpan timeout, CancellationToken cancellationToken)
+    public async Task<MeshyTask> WaitForTaskAsync(string taskId, TimeSpan pollInterval, TimeSpan timeout, CancellationToken cancellationToken, MeshyTaskKind kind = MeshyTaskKind.TextTo3d)
     {
         var deadline = _time.GetUtcNow() + timeout;
         var lastProgress = -1;
         while (true)
         {
-            var task = await GetTaskAsync(taskId, cancellationToken);
+            var task = await GetTaskAsync(taskId, cancellationToken, kind);
             if (task.Progress != lastProgress)
             {
                 logger.LogInformation("Meshy task {TaskId}: {Status} {Progress}%", taskId, task.Status, task.Progress);
@@ -124,12 +139,12 @@ public sealed class MeshyClient(HttpClient http, MeshyOptions options, ILogger<M
         return new FileInfo(destinationPath).Length;
     }
 
-    private async Task<string> CreateTaskAsync(object body, CancellationToken cancellationToken)
+    private async Task<string> CreateTaskAsync(object body, CancellationToken cancellationToken, string path = TextTo3dPath)
     {
         using var response = await SendWithRetryAsync(
             () =>
             {
-                var request = ApiRequest(HttpMethod.Post, TextTo3dPath);
+                var request = ApiRequest(HttpMethod.Post, path);
                 request.Content = JsonContent.Create(body, options: Json);
                 return request;
             },

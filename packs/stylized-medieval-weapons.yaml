@@ -22,6 +22,7 @@ generation:
   origin_at: bottom                # floor-level pivot, the game-ready convention
   alpha_thumbnail: true            # transparent renders for the store cards
   ultra_mode: false                # +5 credits/model; switched on per hero model below with `ultra: true`
+  lods: [2500, 1000]                # Meshy Remesh of the refined model, 5 credits per level; shipped as lod1/lod2 next to the full model
   enable_pbr: true
   texture_resolution: 2k
   target_formats: [glb, fbx, obj, usdz]

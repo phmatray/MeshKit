@@ -21,7 +21,13 @@ public sealed class SampleDownloadTests : IDisposable
         File.WriteAllText(Path.Combine(dir, "private", "LICENSE.txt"), "LICENCE");
         var manifestPath = Path.Combine(dir, "manifest.json");
         var m = PackManifestSerializer.ReadFile(manifestPath);
-        PackManifestSerializer.WriteFile(manifestPath, m with { Sample = sample });
+        // the lantern ships one LOD
+        Directory.CreateDirectory(Path.Combine(dir, "private", "iron-lantern", "lod1"));
+        File.WriteAllText(Path.Combine(dir, "private", "iron-lantern", "lod1", "iron-lantern_lod1.glb"), "lod");
+        var models = m.Models.Select(e => e.Slug == "iron-lantern"
+            ? e with { Lods = [new ModelLod(1, 800, "lod-1", [new ModelFile("glb", "private/iron-lantern/lod1/iron-lantern_lod1.glb", 3)], 790, 5)] }
+            : e).ToList();
+        PackManifestSerializer.WriteFile(manifestPath, m with { Sample = sample, Models = models });
     }
 
     [Fact]
@@ -58,7 +64,7 @@ public sealed class SampleDownloadTests : IDisposable
         Assert.Equal("fantasy-props-sample-iron-lantern.zip", response.Content.Headers.ContentDisposition!.FileName!.Trim('"'));
         using var zip = new ZipArchive(await response.Content.ReadAsStreamAsync());
         Assert.Equal(
-            ["fantasy-props-sample/LICENSE.txt", "fantasy-props-sample/iron-lantern/iron-lantern.glb", "fantasy-props-sample/iron-lantern/iron-lantern.obj"],
+            ["fantasy-props-sample/LICENSE.txt", "fantasy-props-sample/iron-lantern/iron-lantern.glb", "fantasy-props-sample/iron-lantern/iron-lantern.obj", "fantasy-props-sample/iron-lantern/lod1/iron-lantern_lod1.glb"],
             zip.Entries.Select(e => e.FullName).Order(StringComparer.Ordinal));
 
         var recorded = _factory.WithDb(db => db.SampleDownloads.ToList());
@@ -78,6 +84,10 @@ public sealed class SampleDownloadTests : IDisposable
         Assert.Contains("account/login?returnUrl=", visitor);           // anonymous: sign in to download
         Assert.Contains("packs/fantasy-props/sample", member);          // member: direct download
         Assert.Contains("Iron Lantern", member);
+
+        var lantern = await _factory.CreateClientAs(null).GetStringAsync("/packs/fantasy-props?model=iron-lantern");
+        Assert.Contains("2,600 → 790 tris", lantern);                   // LOD chain on the selected model
+        Assert.Contains("1 LOD", lantern);                              // in "What's inside"
     }
 
     [Fact]

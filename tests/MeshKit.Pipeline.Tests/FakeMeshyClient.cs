@@ -11,6 +11,7 @@ public sealed class FakeMeshyClient : IMeshyClient
 {
     public ConcurrentBag<PreviewRequest> PreviewRequests { get; } = [];
     public ConcurrentBag<RefineRequest> RefineRequests { get; } = [];
+    public ConcurrentBag<RemeshRequest> RemeshRequests { get; } = [];
     public ConcurrentBag<(Uri Url, string Path)> Downloads { get; } = [];
 
     /// <summary>Task id → factory. Default: every task succeeds with a glb + fbx and a thumbnail.</summary>
@@ -39,9 +40,20 @@ public sealed class FakeMeshyClient : IMeshyClient
         return Task.FromResult("ref-" + request.PreviewTaskId);
     }
 
-    public Task<MeshyTask> GetTaskAsync(string taskId, CancellationToken cancellationToken) => Task.FromResult(Resolve(taskId));
+    public Task<string> CreateRemeshAsync(RemeshRequest request, CancellationToken cancellationToken)
+    {
+        RemeshRequests.Add(request);
+        if (CreateFailures.TryGetValue($"remesh:{request.InputTaskId}", out var ex))
+        {
+            throw ex;
+        }
 
-    public async Task<MeshyTask> WaitForTaskAsync(string taskId, TimeSpan pollInterval, TimeSpan timeout, CancellationToken cancellationToken)
+        return Task.FromResult($"lod-{request.TargetPolycount}-{request.InputTaskId}");
+    }
+
+    public Task<MeshyTask> GetTaskAsync(string taskId, CancellationToken cancellationToken, MeshyTaskKind kind = MeshyTaskKind.TextTo3d) => Task.FromResult(Resolve(taskId));
+
+    public async Task<MeshyTask> WaitForTaskAsync(string taskId, TimeSpan pollInterval, TimeSpan timeout, CancellationToken cancellationToken, MeshyTaskKind kind = MeshyTaskKind.TextTo3d)
     {
         var now = Interlocked.Increment(ref _inFlight);
         lock (this)
@@ -80,7 +92,7 @@ public sealed class FakeMeshyClient : IMeshyClient
             ? [new Dictionary<string, string> { ["base_color"] = $"https://cdn.test/{id}/base_color.png" }]
             : [],
         ErrorMessage: null,
-        ConsumedCredits: id.StartsWith("ref-", StringComparison.Ordinal) ? 10 : 20);
+        ConsumedCredits: id.StartsWith("ref-", StringComparison.Ordinal) ? 10 : id.StartsWith("lod-", StringComparison.Ordinal) ? 5 : 20);
 
     public static MeshyTask Failed(string id, string message) => new(
         id, MeshyTaskStatus.Failed, 0, new Dictionary<string, string>(), null, [], message, 0);

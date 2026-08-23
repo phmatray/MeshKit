@@ -56,7 +56,8 @@ public static class PackDefinitionLoader
                 AutoSize: gen.AutoSize ?? defaults.AutoSize,
                 OriginAt: gen.OriginAt ?? defaults.OriginAt,
                 AlphaThumbnail: gen.AlphaThumbnail ?? defaults.AlphaThumbnail,
-                TextureImage: string.IsNullOrWhiteSpace(gen.TextureImage) ? null : gen.TextureImage.Trim());
+                TextureImage: string.IsNullOrWhiteSpace(gen.TextureImage) ? null : gen.TextureImage.Trim(),
+                Lods: gen.Lods is { Count: > 0 } ? gen.Lods : null);
 
         var models = (raw.Models ?? []).Select((m, i) => new ModelDefinition(
             Slug: Require(m.Slug, $"models[{i}].slug"),
@@ -143,6 +144,7 @@ public static class PackDefinitionLoader
         public string? OriginAt { get; set; }
         public bool? AlphaThumbnail { get; set; }
         public string? TextureImage { get; set; }
+        public List<int>? Lods { get; set; }
     }
 
     private sealed class ModelYaml

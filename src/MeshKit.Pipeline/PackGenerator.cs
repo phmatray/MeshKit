@@ -38,8 +38,8 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
 
         Persist();
 
-        var pending = definition.Models.Where(m => entries[m.Slug].Status != ModelStatus.Succeeded).ToList();
-        logger.LogInformation("Pack {Slug}: {Pending} model(s) to generate, {Done} already complete",
+        var pending = definition.Models.Where(m => entries[m.Slug].Status != ModelStatus.Succeeded || MissingLods(definition.Generation, entries[m.Slug], packDirectory).Count > 0).ToList();
+        logger.LogInformation("Pack {Slug}: {Pending} model(s) to generate or complete, {Done} already complete",
             definition.Slug, pending.Count, definition.Models.Count - pending.Count);
 
         using var abort = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -51,8 +51,19 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
             await semaphore.WaitAsync(abort.Token);
             try
             {
-                var entry = await GenerateModelAsync(definition, model, packDirectory, options, textureImage, abort.Token);
-                entries[model.Slug] = entry;
+                var entry = entries[model.Slug];
+                if (entry.Status != ModelStatus.Succeeded)
+                {
+                    entry = await GenerateModelAsync(definition, model, packDirectory, options, textureImage, abort.Token);
+                    entries[model.Slug] = entry;
+                    Persist();
+                }
+
+                if (entry.Status == ModelStatus.Succeeded)
+                {
+                    // LODs are a separate, resumable step: a remesh failure never costs the model itself.
+                    entries[model.Slug] = await CompleteLodsAsync(definition, entry, packDirectory, options, abort.Token);
+                }
             }
             catch (MeshyOutOfCreditsException ex)
             {
@@ -254,6 +265,103 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
             logger.LogWarning("Optional download {Path} failed: {Message}", relativePath, ex.Message);
             return null;
         }
+    }
+
+    /// <summary>LOD levels (1-based, in definition order) the entry still lacks: never generated, generated at another polycount, or files gone.</summary>
+    internal static List<(int Level, int Polycount)> MissingLods(GenerationSettings gen, ModelEntry entry, string packDirectory)
+    {
+        var missing = new List<(int, int)>();
+        for (var i = 0; i < gen.LodLevels.Count; i++)
+        {
+            var level = i + 1;
+            var existing = entry.LodList.FirstOrDefault(l => l.Level == level);
+            var present = existing is not null
+                && existing.TargetPolycount == gen.LodLevels[i]
+                && existing.Files.Count > 0
+                && existing.Files.All(f => PackPaths.IsSafeRelative(f.Path) && File.Exists(PackPaths.Resolve(packDirectory, f.Path)));
+            if (!present)
+            {
+                missing.Add((level, gen.LodLevels[i]));
+            }
+        }
+
+        return missing;
+    }
+
+    /// <summary>
+    /// Produces the LODs an entry lacks by remeshing its refined task (Meshy Remesh, 5 credits each).
+    /// Out of credits aborts the run like any other stage; any other failure keeps the LODs already made
+    /// and leaves the rest for the next run — the model stays sellable either way.
+    /// </summary>
+    private async Task<ModelEntry> CompleteLodsAsync(PackDefinition pack, ModelEntry entry, string packDirectory, GeneratorOptions options, CancellationToken ct)
+    {
+        var gen = pack.Generation;
+        var missing = MissingLods(gen, entry, packDirectory);
+        if (missing.Count == 0)
+        {
+            return entry;
+        }
+
+        if (entry.RefineTaskId is null)
+        {
+            logger.LogWarning("[{Model}] cannot build LODs: no refine task id in the manifest", entry.Slug);
+            return entry;
+        }
+
+        var lods = entry.LodList.Where(l => !missing.Any(m => m.Level == l.Level)).ToList();
+        foreach (var (level, polycount) in missing)
+        {
+            try
+            {
+                logger.LogInformation("[{Model}] lod{Level} remesh to {Polycount} starting", entry.Slug, level, polycount);
+                var taskId = await meshy.CreateRemeshAsync(new RemeshRequest(entry.RefineTaskId, gen.TargetFormats, gen.Topology, polycount), ct);
+                var task = await meshy.WaitForTaskAsync(taskId, options.PollInterval, options.TaskTimeout, ct, MeshyTaskKind.Remesh);
+
+                var files = new List<ModelFile>();
+                foreach (var (format, url) in task.ModelUrls.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+                {
+                    var relative = $"{PackPaths.PrivateRoot}/{entry.Slug}/lod{level}/{entry.Slug}_lod{level}.{format}";
+                    var bytes = await meshy.DownloadAsync(new Uri(url), PackPaths.Resolve(packDirectory, relative), ct);
+                    files.Add(new ModelFile(format, relative, bytes));
+                }
+
+                if (files.Count == 0)
+                {
+                    throw new InvalidOperationException($"Remesh task {taskId} succeeded without any model url.");
+                }
+
+                int? triangles = null;
+                if (files.FirstOrDefault(f => f.Format == "glb") is { } glb)
+                {
+                    try
+                    {
+                        triangles = GlbInspector.Inspect(PackPaths.Resolve(packDirectory, glb.Path)).Triangles;
+                    }
+                    catch (Exception ex) when (ex is IOException or InvalidDataException)
+                    {
+                        logger.LogWarning("[{Model}] lod{Level}: cannot measure triangles ({Message})", entry.Slug, level, ex.Message);
+                    }
+                }
+
+                lods.Add(new ModelLod(level, polycount, taskId, files, triangles, task.ConsumedCredits));
+                logger.LogInformation("[{Model}] lod{Level} done: {Triangles} tris, {Files} file(s), {Credits} credits", entry.Slug, level, triangles?.ToString() ?? "?", files.Count, task.ConsumedCredits);
+            }
+            catch (MeshyOutOfCreditsException)
+            {
+                throw;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex) when (ex is MeshyApiException or MeshyTaskFailedException or MeshyTimeoutException or IOException or InvalidOperationException or HttpRequestException)
+            {
+                logger.LogError("[{Model}] lod{Level} failed: {Message} — rerun to retry", entry.Slug, level, ex.Message);
+                break;
+            }
+        }
+
+        return entry with { Lods = lods.OrderBy(l => l.Level).ToList() };
     }
 
     /// <summary>

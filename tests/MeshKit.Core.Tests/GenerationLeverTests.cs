@@ -132,6 +132,20 @@ public class GenerationLeverTests
     }
 
     [Fact]
+    public void Lods_parse_and_must_be_distinct_below_budget_and_at_most_three()
+    {
+        var pack = PackDefinitionLoader.Load(Yaml.Replace("target_polycount: 4000", "target_polycount: 4000\n  lods: [2000, 800]"));
+        Assert.Equal([2000, 800], pack.Generation.LodLevels);
+        Assert.Empty(PackDefinitionValidator.Validate(pack));
+
+        var gen = pack.Generation;
+        Assert.Contains(PackDefinitionValidator.Validate(pack with { Generation = gen with { Lods = [2000, 2000] } }), e => e.Contains("distinct"));
+        Assert.Contains(PackDefinitionValidator.Validate(pack with { Generation = gen with { Lods = [4000] } }), e => e.Contains("not below target_polycount"));
+        Assert.Contains(PackDefinitionValidator.Validate(pack with { Generation = gen with { Lods = [50] } }), e => e.Contains("minimum of 100"));
+        Assert.Contains(PackDefinitionValidator.Validate(pack with { Generation = gen with { Lods = [3000, 2000, 1000, 500] } }), e => e.Contains("at most 3"));
+    }
+
+    [Fact]
     public void Sample_names_one_of_the_models_and_reaches_the_manifest()
     {
         var pack = PackDefinitionLoader.Load(Yaml.Replace("models:", "sample: pine\nmodels:"));

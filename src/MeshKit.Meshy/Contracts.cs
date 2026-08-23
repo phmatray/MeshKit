@@ -30,6 +30,16 @@ public sealed record RefineRequest(
     string? OriginAt = null,
     bool AlphaThumbnail = false);
 
+/// <summary>Remesh of a finished text-to-3D task to a lighter polycount (a LOD). 5 credits.</summary>
+public sealed record RemeshRequest(string InputTaskId, IReadOnlyList<string> TargetFormats, string Topology, int TargetPolycount);
+
+/// <summary>Which Meshy task family an id belongs to; they live under different API paths but share one shape.</summary>
+public enum MeshyTaskKind
+{
+    TextTo3d,
+    Remesh,
+}
+
 public enum MeshyTaskStatus
 {
     Unknown,
@@ -64,10 +74,12 @@ public interface IMeshyClient
 
     Task<string> CreateRefineAsync(RefineRequest request, CancellationToken cancellationToken);
 
-    Task<MeshyTask> GetTaskAsync(string taskId, CancellationToken cancellationToken);
+    Task<string> CreateRemeshAsync(RemeshRequest request, CancellationToken cancellationToken);
+
+    Task<MeshyTask> GetTaskAsync(string taskId, CancellationToken cancellationToken, MeshyTaskKind kind = MeshyTaskKind.TextTo3d);
 
     /// <summary>Polls until the task is terminal. Throws <see cref="MeshyTaskFailedException"/> on FAILED/CANCELED, <see cref="MeshyTimeoutException"/> after <paramref name="timeout"/>.</summary>
-    Task<MeshyTask> WaitForTaskAsync(string taskId, TimeSpan pollInterval, TimeSpan timeout, CancellationToken cancellationToken);
+    Task<MeshyTask> WaitForTaskAsync(string taskId, TimeSpan pollInterval, TimeSpan timeout, CancellationToken cancellationToken, MeshyTaskKind kind = MeshyTaskKind.TextTo3d);
 
     /// <summary>Streams a signed asset URL to <paramref name="destinationPath"/>, creating directories. Returns bytes written.</summary>
     Task<long> DownloadAsync(Uri url, string destinationPath, CancellationToken cancellationToken);

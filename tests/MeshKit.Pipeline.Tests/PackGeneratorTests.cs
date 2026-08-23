@@ -145,6 +145,60 @@ public sealed class PackGeneratorTests : IDisposable
     }
 
     [Fact]
+    public async Task Lods_are_remeshed_from_the_refine_task_and_recorded()
+    {
+        var definition = Definition("chest") with { Generation = Definition().Generation with { Lods = [2000, 800] } };
+
+        var manifest = await Generator().GenerateAsync(definition, PackDir, Fast, CancellationToken.None);
+
+        var entry = Assert.Single(manifest.Models);
+        Assert.Equal(ModelStatus.Succeeded, entry.Status);
+        Assert.Equal([1, 2], entry.LodList.Select(l => l.Level));
+        Assert.Equal([2000, 800], entry.LodList.Select(l => l.TargetPolycount));
+        Assert.All(_meshy.RemeshRequests, r => Assert.Equal(("ref-prev-prompt chest", "triangle"), (r.InputTaskId, r.Topology)));
+        Assert.Equal(["glb", "fbx"], _meshy.RemeshRequests.First().TargetFormats);
+        var lod1 = entry.LodList[0];
+        Assert.Equal("private/chest/lod1/chest_lod1.glb", lod1.Files.Single(f => f.Format == "glb").Path);
+        Assert.Equal(12, lod1.Triangles);       // the fake "downloads" a unit cube
+        Assert.Equal(5, lod1.ConsumedCredits);
+        Assert.All(entry.AllFiles, f => Assert.True(File.Exists(Path.Combine(PackDir, f.Path)), f.Path));
+        Assert.True(manifest.IsSellable);
+    }
+
+    [Fact]
+    public async Task Rerun_adds_missing_lods_to_a_finished_model_without_regenerating_it()
+    {
+        await Generator().GenerateAsync(Definition("chest"), PackDir, Fast, CancellationToken.None);
+        _meshy.PreviewRequests.Clear();
+        var withLods = Definition("chest") with { Generation = Definition().Generation with { Lods = [2000] } };
+
+        var manifest = await Generator().GenerateAsync(withLods, PackDir, Fast, CancellationToken.None);
+
+        Assert.Empty(_meshy.PreviewRequests);
+        Assert.Single(_meshy.RemeshRequests);
+        Assert.Single(manifest.Models.Single().LodList);
+
+        // and a second rerun does nothing at all
+        _meshy.RemeshRequests.Clear();
+        await Generator().GenerateAsync(withLods, PackDir, Fast, CancellationToken.None);
+        Assert.Empty(_meshy.RemeshRequests);
+    }
+
+    [Fact]
+    public async Task Lod_failure_keeps_the_model_sellable_and_the_lods_already_made()
+    {
+        _meshy.Outcomes["lod-800-ref-prev-prompt chest"] = () => FakeMeshyClient.Failed("lod-800-ref-prev-prompt chest", "remesh exploded");
+        var definition = Definition("chest") with { Generation = Definition().Generation with { Lods = [2000, 800] } };
+
+        var manifest = await Generator().GenerateAsync(definition, PackDir, Fast, CancellationToken.None);
+
+        var entry = Assert.Single(manifest.Models);
+        Assert.Equal(ModelStatus.Succeeded, entry.Status);
+        Assert.Equal([1], entry.LodList.Select(l => l.Level));
+        Assert.True(manifest.IsSellable);
+    }
+
+    [Fact]
     public async Task Rerun_skips_finished_models_unless_their_prompt_changed()
     {
         await Generator().GenerateAsync(Definition("chest", "barrel"), PackDir, Fast, CancellationToken.None);

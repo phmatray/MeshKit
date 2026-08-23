@@ -83,8 +83,17 @@ public sealed record GenerationSettings(
     bool AutoSize = false,
     string OriginAt = "bottom",
     bool AlphaThumbnail = true,
-    string? TextureImage = null)
+    string? TextureImage = null,
+    IReadOnlyList<int>? Lods = null)
 {
+    /// <summary>
+    /// Extra polycount levels produced by Meshy Remesh from the refined model (5 credits each), shipped as
+    /// <c>lod1</c>, <c>lod2</c>… next to the full model. Empty by default; <see cref="Lods"/> is never null.
+    /// </summary>
+    public IReadOnlyList<int> LodLevels => Lods ?? [];
+
+    public const int MaxLods = 3;
+
     public const string PreviewTextured = "textured";
     public const string PreviewClay = "clay";
 

@@ -10,9 +10,10 @@ namespace MeshKit.Pipeline;
 /// <c>private/</c>) by driving Meshy preview → refine per model. Resume-safe: the manifest is
 /// rewritten after every model, and models already succeeded on disk are skipped.
 /// </summary>
-public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> logger, TimeProvider? timeProvider = null)
+public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> logger, TimeProvider? timeProvider = null, LicenseWriter? licenseWriter = null)
 {
     private readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
+    private readonly LicenseWriter _licenses = licenseWriter ?? new LicenseWriter(LicenseWriter.Licensor.AtypicalConsulting);
 
     public async Task<PackManifest> GenerateAsync(PackDefinition definition, string packDirectory, GeneratorOptions options, CancellationToken cancellationToken)
     {
@@ -21,7 +22,9 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
 
         var entries = SeedEntries(definition, packDirectory, manifestPath);
         await ReconcilePreviewsAsync(definition, entries, packDirectory, cancellationToken);
-        var manifest = PackManifest.FromDefinition(definition, _time.GetUtcNow()) with { Models = entries.Values.ToList() };
+        ReconcileMetadata(definition, entries, packDirectory);
+        var license = _licenses.Write(definition, packDirectory, options.DefinitionDirectory, _time.GetUtcNow());
+        var manifest = PackManifest.FromDefinition(definition, _time.GetUtcNow()) with { Models = entries.Values.ToList(), License = license };
         var gate = new object();
         void Persist()
         {
@@ -103,7 +106,7 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
             if (previous.TryGetValue(model.Slug, out var old) && old.Status == ModelStatus.Succeeded && AssetsPresent(old, packDirectory))
             {
                 // Keep the generated assets, refresh the human-facing metadata from the definition.
-                entries[model.Slug] = old with { Name = model.Name, Prompt = model.Prompt };
+                entries[model.Slug] = old with { Name = model.Name, Prompt = model.Prompt, Tags = model.Tags, Category = model.Category };
             }
             else
             {
@@ -175,6 +178,39 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
 
             entries[slug] = entry with { PreviewTextured = true, Preview = textured, Thumbnail = thumb ?? entry.Thumbnail };
             logger.LogInformation("[{Model}] preview switched to textured", slug);
+        }
+    }
+
+    /// <summary>Measures succeeded models that predate metadata (or whose files changed) — reads the glb on disk, no Meshy call.</summary>
+    private void ReconcileMetadata(PackDefinition definition, Dictionary<string, ModelEntry> entries, string packDirectory)
+    {
+        foreach (var slug in entries.Keys.ToList())
+        {
+            var entry = entries[slug];
+            if (entry.Status != ModelStatus.Succeeded || entry.Metadata is not null || entry.Files.Count == 0)
+            {
+                continue;
+            }
+
+            var metadata = TryDescribe(slug, entry.Files, packDirectory, definition.Generation);
+            if (metadata is not null)
+            {
+                entries[slug] = entry with { Metadata = metadata };
+                logger.LogInformation("[{Model}] measured: {Tris} tris, {W}×{H}×{D} m", slug, metadata.Triangles, metadata.Width, metadata.Height, metadata.Depth);
+            }
+        }
+    }
+
+    private ModelMetadata? TryDescribe(string slug, IReadOnlyList<ModelFile> files, string packDirectory, GenerationSettings gen)
+    {
+        try
+        {
+            return GlbInspector.Describe(packDirectory, files, gen.EnablePbr, gen.TextureResolution);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or System.Text.Json.JsonException or InvalidOperationException or OverflowException)
+        {
+            logger.LogWarning("[{Model}] could not measure glb: {Message}", slug, ex.Message);
+            return null;
         }
     }
 
@@ -294,6 +330,7 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
                 Files = files,
                 ConsumedCredits = preview.ConsumedCredits + refined.ConsumedCredits,
                 PreviewTextured = false,
+                Metadata = TryDescribe(model.Slug, files, packDirectory, gen),
             };
             return pack.Generation.Preview == GenerationSettings.PreviewTextured && texturedPreview is not null
                 ? done with { PreviewTextured = true, Preview = texturedPreview, Thumbnail = texturedThumb ?? thumbnailPath }

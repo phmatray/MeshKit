@@ -1,0 +1,52 @@
+MESHKIT ROYALTY-FREE ASSET LICENCE
+==================================
+
+Pack:       {{PACK_NAME}} ({{PACK_SLUG}})
+Licensor:   {{LICENSOR}}
+VAT:        {{LICENSOR_VAT}}
+Issued:     {{DATE}}
+Store:      {{STORE_URL}}
+
+This licence is granted to the person or organisation that purchased this pack from the store
+above (the "Licensee"). It covers every file in this pack: meshes, textures, material definitions
+and previews (the "Assets").
+
+1. WHAT YOU MAY DO
+   - Use the Assets in an unlimited number of personal and commercial projects: games, films,
+     renders, VR/AR experiences, 3D prints, prototypes, marketing material.
+   - Modify the Assets (retopology, retexturing, rigging, combining with other assets).
+   - Ship the Assets inside a finished product, provided they are embedded in that product and
+     are not extractable as standalone files in the original or a trivially converted form.
+   - Use the Assets in work for clients; each client project counts as one of your projects.
+
+2. WHAT YOU MAY NOT DO
+   - Resell, sublicense, rent, share or redistribute the Assets themselves, modified or not, as
+     files — including in asset packs, template kits, marketplaces, or "free download" sites.
+   - Use the Assets to train, fine-tune or evaluate machine-learning models.
+   - Claim authorship of the Assets or register them as your own trademark or design.
+   - Use the Assets in content that is unlawful, defamatory, or that infringes third-party rights.
+
+3. OWNERSHIP
+   The Assets were produced by the Licensor with generative tools and curated by the Licensor.
+   The Licensor retains all rights not expressly granted here. No attribution is required, though
+   it is appreciated.
+
+4. SEATS
+   One purchase covers one Licensee. Within a company, the Assets may be used by members of the
+   team working on the same projects; a separate purchase is needed for each separate legal entity.
+
+5. REFUNDS AND REVOCATION
+   Digital goods are delivered instantly; refunds are at the Licensor's discretion. The licence
+   terminates automatically if you breach section 2; on termination you must stop distributing
+   products that expose the Assets as files, though products already shipped may remain.
+
+6. WARRANTY AND LIABILITY
+   The Assets are provided "as is". To the extent permitted by law, the Licensor disclaims all
+   warranties and is not liable for indirect or consequential damages. The Licensor's total
+   liability is limited to the price paid for this pack.
+
+7. LAW
+   Belgian law applies; the courts of the Licensor's registered seat have jurisdiction.
+
+This licence text is a template written for MeshKit. It has not been reviewed by a lawyer;
+the Licensor should have it reviewed before relying on it in a dispute.

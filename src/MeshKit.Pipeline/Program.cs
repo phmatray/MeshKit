@@ -79,6 +79,7 @@ internal static class Cli
             Concurrency = Int(options, "concurrency", GeneratorOptions.Default.Concurrency),
             PollInterval = TimeSpan.FromSeconds(Int(options, "poll-seconds", (int)GeneratorOptions.Default.PollInterval.TotalSeconds)),
             TaskTimeout = TimeSpan.FromMinutes(Int(options, "timeout-minutes", (int)GeneratorOptions.Default.TaskTimeout.TotalMinutes)),
+            DefinitionDirectory = Path.GetDirectoryName(Path.GetFullPath(packFile)),
         };
 
         var packDir = Path.Combine(outDir, definition.Slug);

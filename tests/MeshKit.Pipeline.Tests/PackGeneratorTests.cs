@@ -22,7 +22,11 @@ public sealed class PackGeneratorTests : IDisposable
         Description: "d",
         Price: new Price(1900, "eur"),
         Generation: GenerationSettings.Default with { TargetFormats = ["glb", "fbx"], EnablePbr = true, ModelType = "lowpoly", Preview = preview },
-        Models: models.Select(m => new ModelDefinition(m, m.ToUpperInvariant(), "prompt " + m, m == "chest" ? "oak" : null)).ToList());
+        Models: models.Select(m => new ModelDefinition(m, m.ToUpperInvariant(), "prompt " + m, m == "chest" ? "oak" : null, m == "chest" ? ["loot", "wood"] : [], null)).ToList(),
+        Tags: ["fantasy"],
+        Category: "props",
+        Style: "lowpoly",
+        License: LicenseChoice.Default);
 
     private PackGenerator Generator() => new(_meshy, NullLogger<PackGenerator>.Instance);
 
@@ -54,6 +58,24 @@ public sealed class PackGeneratorTests : IDisposable
 
         var onDisk = PackManifestSerializer.ReadFile(Path.Combine(PackDir, PackManifestSerializer.FileName));
         Assert.Equal(manifest, onDisk);
+
+        // measured from the glb the fake client "downloaded" (a unit cube)
+        var meta = entry.Metadata!;
+        Assert.Equal((12, 8, 1.0, 1.0, 1.0), (meta.Triangles, meta.Vertices, meta.Width, meta.Height, meta.Depth));
+        Assert.True(meta.Pbr);
+        Assert.Equal("2k", meta.TextureResolution);
+        Assert.Equal(["base_color"], meta.TextureMaps);
+        Assert.Equal(entry.Files.Sum(f => f.Bytes), meta.TotalBytes);
+        Assert.Equal(["loot", "wood"], entry.TagList);
+        Assert.Equal(["fantasy"], manifest.TagList);
+
+        // licence written twice: viewable before purchase, shipped inside the zip
+        Assert.Equal("meshkit-standard", manifest.License!.Id);
+        var publicLicense = File.ReadAllText(Path.Combine(PackDir, "public/LICENSE.txt"));
+        Assert.Equal(publicLicense, File.ReadAllText(Path.Combine(PackDir, "private/LICENSE.txt")));
+        Assert.Contains("Pack:       Props (props)", publicLicense);
+        Assert.Contains("BE 0744.517.956", publicLicense);
+        Assert.DoesNotContain("{{", publicLicense);
 
         var preview = Assert.Single(_meshy.PreviewRequests);
         Assert.Equal("lowpoly", preview.ModelType);
@@ -118,6 +140,39 @@ public sealed class PackGeneratorTests : IDisposable
         Assert.Equal("public/preview/chest.textured.glb", entry.Preview);
         var download = Assert.Single(_meshy.Downloads);
         Assert.Contains("ref-prev-prompt chest/thumb.png", download.Url.ToString());
+    }
+
+    [Fact]
+    public async Task Old_pack_without_metadata_or_licence_gets_both_on_resume_without_meshy()
+    {
+        await Generator().GenerateAsync(Definition("chest"), PackDir, Fast, CancellationToken.None);
+        var manifestPath = Path.Combine(PackDir, PackManifestSerializer.FileName);
+        var old = PackManifestSerializer.ReadFile(manifestPath);
+        PackManifestSerializer.WriteFile(manifestPath, old with { License = null, Models = [old.Models[0] with { Metadata = null, Tags = null }] });
+        File.Delete(Path.Combine(PackDir, "private/LICENSE.txt"));
+        _meshy.PreviewRequests.Clear();
+
+        var manifest = await Generator().GenerateAsync(Definition("chest"), PackDir, Fast, CancellationToken.None);
+
+        Assert.Empty(_meshy.PreviewRequests);
+        Assert.Equal(12, manifest.Models[0].Metadata!.Triangles);
+        Assert.Equal(["loot", "wood"], manifest.Models[0].TagList);
+        Assert.NotNull(manifest.License);
+        Assert.True(File.Exists(Path.Combine(PackDir, "private/LICENSE.txt")));
+    }
+
+    [Fact]
+    public async Task Custom_licence_file_is_resolved_relative_to_the_definition()
+    {
+        var defDir = Path.Combine(_root.FullName, "packs");
+        Directory.CreateDirectory(defDir);
+        File.WriteAllText(Path.Combine(defDir, "my-licence.txt"), "Pack {{PACK_NAME}}: do whatever.");
+        var def = Definition("chest") with { License = new LicenseChoice("custom", "my-licence.txt") };
+
+        var manifest = await Generator().GenerateAsync(def, PackDir, Fast with { DefinitionDirectory = defDir }, CancellationToken.None);
+
+        Assert.Equal("custom", manifest.License!.Id);
+        Assert.Equal("Pack Props: do whatever.", File.ReadAllText(Path.Combine(PackDir, "public/LICENSE.txt")));
     }
 
     [Fact]

@@ -65,7 +65,7 @@ public sealed class FakeMeshyClient : IMeshyClient
     {
         Downloads.Add((url, destinationPath));
         Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
-        var bytes = System.Text.Encoding.UTF8.GetBytes(url.ToString());
+        var bytes = destinationPath.EndsWith(".glb", StringComparison.Ordinal) ? TestGlb.Cube() : System.Text.Encoding.UTF8.GetBytes(url.ToString());
         await File.WriteAllBytesAsync(destinationPath, bytes, cancellationToken);
         return bytes.Length;
     }

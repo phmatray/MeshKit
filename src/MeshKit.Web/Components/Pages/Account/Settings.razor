@@ -1,0 +1,116 @@
+@page "/account"
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using MeshKit.Web.Notifications
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IdentityRedirectManager RedirectManager
+@inject AccountDeleter Deleter
+@inject TimeProvider Time
+
+<PageTitle>Your account — MeshKit</PageTitle>
+
+<div class="mx-auto max-w-xl space-y-10">
+    <div>
+        <h1 class="text-3xl font-bold">Your account</h1>
+        <p class="mt-1 text-ink/70">@_user?.Email</p>
+    </div>
+
+    <StatusMessage Message="@_status" />
+
+    <section aria-labelledby="notify-heading" class="rounded-2xl border border-ink/10 bg-white p-5">
+        <h2 id="notify-heading" class="text-lg font-semibold">New packs</h2>
+        <p class="mt-1 text-sm text-ink/70">One email per release, nothing else. Every email has a one-click stop link.</p>
+        <EditForm Model="Notify!" method="post" OnValidSubmit="SaveNotificationsAsync" FormName="notifications" class="mt-4 space-y-3">
+            <label class="flex items-start gap-2 text-sm">
+                <InputCheckbox @bind-Value="Notify!.NewReleases" class="mt-0.5 accent-coral-dark" />
+                <span>Email me when a new pack is released</span>
+            </label>
+            <button type="submit" class="rounded-full bg-ink px-5 py-2 text-sm font-semibold text-cream hover:bg-ink/85">Save</button>
+        </EditForm>
+    </section>
+
+    <section aria-labelledby="delete-heading" class="rounded-2xl border border-red-200 bg-red-50/40 p-5">
+        <h2 id="delete-heading" class="text-lg font-semibold">Delete your account</h2>
+        <p class="mt-1 text-sm text-ink/70">
+            Removes your email, password, preferences and sample history immediately, and signs you out. Order records are kept as
+            accounting law requires, under a pseudonym that cannot be linked back to you — which also means
+            <strong>packs you bought can no longer be re-downloaded</strong>. Save them first.
+        </p>
+        <EditForm Model="Delete!" method="post" OnValidSubmit="DeleteAsync" FormName="delete" class="mt-4 space-y-3">
+            <DataAnnotationsValidator />
+            <div>
+                <label for="delete-password" class="block text-sm font-medium">Confirm with your password</label>
+                <InputText id="delete-password" @bind-Value="Delete!.Password" type="password" autocomplete="current-password" class="mt-1 w-full rounded-lg border border-ink/20 bg-white px-3 py-2" />
+                <ValidationMessage For="() => Delete!.Password" class="text-sm text-red-700" />
+            </div>
+            <button type="submit" class="rounded-full border border-red-300 bg-white px-5 py-2 text-sm font-semibold text-red-800 hover:bg-red-100">Delete my account</button>
+        </EditForm>
+    </section>
+</div>
+
+@code {
+    private ApplicationUser? _user;
+    private string? _status;
+
+    [SupplyParameterFromForm(FormName = "notifications")] private NotifyModel? Notify { get; set; }
+
+    [SupplyParameterFromForm(FormName = "delete")] private DeleteModel? Delete { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _user = await UserManager.GetUserAsync(HttpContextAccessor.HttpContext!.User);
+        Notify ??= new NotifyModel { NewReleases = _user?.NewReleaseOptIn ?? false };
+        Delete ??= new DeleteModel();
+    }
+
+    private async Task SaveNotificationsAsync()
+    {
+        if (_user is null)
+        {
+            return;
+        }
+
+        var wanted = Notify!.NewReleases;
+        if (wanted != _user.NewReleaseOptIn)
+        {
+            _user.NewReleaseOptIn = wanted;
+            _user.NewReleaseOptInAt = wanted ? Time.GetUtcNow() : null;
+            await UserManager.UpdateAsync(_user);
+        }
+
+        _status = wanted ? "You will get an email when a new pack is released." : "You will not be emailed about new packs.";
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (_user is null || !await UserManager.CheckPasswordAsync(_user, Delete!.Password))
+        {
+            _status = "Error: that password is not correct.";
+            return;
+        }
+
+        var result = await Deleter.DeleteAsync(_user, CancellationToken.None);
+        if (!result.Succeeded)
+        {
+            _status = "Error: " + string.Join(" ", result.Errors.Select(e => e.Description));
+            return;
+        }
+
+        await SignInManager.SignOutAsync();
+        RedirectManager.RedirectToWithStatus("/", "Your account has been deleted.");
+    }
+
+    private sealed class NotifyModel
+    {
+        public bool NewReleases { get; set; }
+    }
+
+    private sealed class DeleteModel
+    {
+        [Required]
+        public string Password { get; set; } = string.Empty;
+    }
+}

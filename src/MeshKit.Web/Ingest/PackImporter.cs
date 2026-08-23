@@ -4,7 +4,8 @@ using MeshKit.Web.Catalog;
 
 namespace MeshKit.Web.Ingest;
 
-public sealed record ImportResult(bool Success, string? Slug, string? Error, bool Sellable);
+/// <param name="IsNew">The slug was not in the catalogue before this import — the only case that announces a release.</param>
+public sealed record ImportResult(bool Success, string? Slug, string? Error, bool Sellable, bool IsNew = false);
 
 /// <summary>
 /// Installs a pack archive into the catalog: extract to a staging directory next to the catalog,
@@ -76,7 +77,8 @@ public sealed class PackImporter(ICatalogService catalog, ILogger<PackImporter> 
 
             var target = Path.Combine(catalog.RootPath, manifest.Slug);
             var retired = Path.Combine(staging, "previous");
-            if (Directory.Exists(target))
+            var isNew = !Directory.Exists(target);
+            if (!isNew)
             {
                 Directory.Move(target, retired);
             }
@@ -84,7 +86,7 @@ public sealed class PackImporter(ICatalogService catalog, ILogger<PackImporter> 
             Directory.Move(extracted, target);
             catalog.Reload();
             logger.LogInformation("Imported pack {Slug} ({Models} models, sellable: {Sellable})", manifest.Slug, manifest.Models.Count, manifest.IsSellable);
-            return new ImportResult(true, manifest.Slug, null, manifest.IsSellable);
+            return new ImportResult(true, manifest.Slug, null, manifest.IsSellable, isNew);
         }
         finally
         {

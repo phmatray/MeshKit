@@ -55,6 +55,32 @@ public static class EmailTemplates
         return new EmailMessage(to, null, subject, html, Footer(text));
     }
 
+    public static EmailMessage NewRelease(string to, Core.Catalog.PackManifest pack, string baseUrl, string unsubscribeUrl)
+    {
+        var packUrl = $"{baseUrl}/packs/{pack.Slug}";
+        var price = Components.Shared.Money.Format(pack.Price.Amount, pack.Price.Currency);
+        var sample = pack.SampleModel;
+        var subject = $"New pack: {pack.Name}";
+        var html = Layout(subject, $"""
+            <p style="margin:0 0 16px"><strong>{E(pack.Name)}</strong> is out — {pack.Models.Count} game-ready models for {E(price)}.</p>
+            <p style="margin:0 0 16px;color:#555">{E(pack.Description)}</p>
+            {Button(packUrl, $"See {E(pack.Name)}")}
+            {(sample is null ? "" : $"""<p style="margin:16px 0 0;color:#555">Try it first: the <strong>{E(sample.Name)}</strong> is free to download from the pack page.</p>""")}
+            <p style="margin:24px 0 0;font-size:12px;color:#888">You get this because you asked to hear about new packs. <a href="{unsubscribeUrl}" style="color:#888">Stop these emails</a> — one click, no login.</p>
+            """);
+        var text = $"""
+            {pack.Name} is out — {pack.Models.Count} game-ready models for {price}.
+
+            {pack.Description}
+
+            {packUrl}
+            {(sample is null ? "" : $"Try it first: the {sample.Name} is free to download from the pack page.")}
+
+            You get this because you asked to hear about new packs. Stop these emails (one click, no login): {unsubscribeUrl}
+            """;
+        return new EmailMessage(to, null, subject, html, Footer(text));
+    }
+
     public static EmailMessage PasswordReset(string to, string resetUrl)
     {
         const string subject = "Reset your MeshKit password";

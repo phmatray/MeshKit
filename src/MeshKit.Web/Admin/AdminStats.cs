@@ -7,6 +7,8 @@ namespace MeshKit.Web.Admin;
 /// <summary>Everything the owner dashboard shows, read in one pass. No new data — the tables the store already keeps.</summary>
 public sealed record AdminStats(
     int Accounts,
+    int ReleaseSubscribers,
+    IReadOnlyList<AnnouncementRow> Announcements,
     int PaidOrders,
     int PendingOrders,
     IReadOnlyDictionary<string, long> RevenueByCurrency,
@@ -19,6 +21,8 @@ public sealed record AdminStats(
     IReadOnlyList<OrderRow> RecentOrders,
     IReadOnlyList<SampleRow> TriedNotBought);
 
+public sealed record AnnouncementRow(string PackSlug, DateTimeOffset SentAt, int Recipients);
+
 public sealed record PackRow(string Slug, string Name, int Paid, long Revenue, string Currency, int Samples, int SampleUsers, int SampleUsersWhoBought);
 
 public sealed record OrderRow(DateTimeOffset CreatedAt, string Email, string PackSlug, long Amount, string Currency, OrderStatus Status);
@@ -30,6 +34,8 @@ public sealed class AdminStatsReader(ApplicationDbContext db, ICatalogService ca
     public async Task<AdminStats> ReadAsync(CancellationToken cancellationToken)
     {
         var users = await db.Users.Select(u => new { u.Id, u.Email }).ToDictionaryAsync(u => u.Id, u => u.Email ?? "(no email)", cancellationToken);
+        var subscribers = await db.Users.CountAsync(u => u.NewReleaseOptIn, cancellationToken);
+        var announcements = await db.PackAnnouncements.OrderByDescending(a => a.Id).Select(a => new AnnouncementRow(a.PackSlug, a.SentAt, a.Recipients)).ToListAsync(cancellationToken);
         var orders = await db.Orders.ToListAsync(cancellationToken);
         var entitlements = await db.Entitlements.Select(e => new { e.UserId, e.PackSlug }).ToListAsync(cancellationToken);
         var samples = await db.SampleDownloads.ToListAsync(cancellationToken);
@@ -52,6 +58,8 @@ public sealed class AdminStatsReader(ApplicationDbContext db, ICatalogService ca
 
         return new AdminStats(
             Accounts: users.Count,
+            ReleaseSubscribers: subscribers,
+            Announcements: announcements,
             PaidOrders: paid.Count,
             PendingOrders: orders.Count(o => o.Status == OrderStatus.Pending),
             RevenueByCurrency: paid.GroupBy(o => o.Currency).ToDictionary(g => g.Key, g => g.Sum(o => o.AmountTotal)),

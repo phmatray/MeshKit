@@ -30,6 +30,8 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(MeshKitPolicies.Owner, policy => policy.RequireAuthenticatedUser().AddRequirements(new OwnerRequirement())));
 builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, OwnerHandler>();
 builder.Services.AddScoped<AdminStatsReader>();
+builder.Services.AddScoped<MeshKit.Web.Notifications.ReleaseAnnouncer>();
+builder.Services.AddScoped<MeshKit.Web.Notifications.AccountDeleter>();
 builder.Services
     .AddIdentityCore<ApplicationUser>(options =>
     {

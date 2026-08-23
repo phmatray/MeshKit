@@ -9,7 +9,7 @@ public static class IngestEndpoints
 {
     public static IEndpointRouteBuilder MapIngestEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/ingest", async (HttpContext http, IOptions<IngestOptions> options, PackImporter importer, CancellationToken cancellationToken) =>
+        app.MapPost("/api/ingest", async (HttpContext http, IOptions<IngestOptions> options, PackImporter importer, Notifications.ReleaseAnnouncer announcer, CancellationToken cancellationToken) =>
         {
             var expected = options.Value.Token;
             if (string.IsNullOrWhiteSpace(expected))
@@ -58,8 +58,9 @@ public static class IngestEndpoints
 
             await using var stream = file.OpenReadStream();
             var result = await importer.ImportAsync(stream, cancellationToken);
+            var announced = result is { Success: true, Sellable: true, IsNew: true } ? await announcer.AnnounceAsync(result.Slug!, cancellationToken) : 0;
             return result.Success
-                ? Results.Created($"/packs/{result.Slug}", new { slug = result.Slug, sellable = result.Sellable })
+                ? Results.Created($"/packs/{result.Slug}", new { slug = result.Slug, sellable = result.Sellable, isNew = result.IsNew, announced })
                 : Results.BadRequest(new { error = result.Error });
         }).DisableAntiforgery();
 

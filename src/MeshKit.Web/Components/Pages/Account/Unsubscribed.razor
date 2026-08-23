@@ -1,0 +1,18 @@
+@page "/account/unsubscribed"
+
+<PageTitle>Unsubscribed — MeshKit</PageTitle>
+
+<div class="mx-auto max-w-md space-y-4 text-center">
+    <h1 class="text-3xl font-bold">@(Ok ? "Done" : "That link did not work")</h1>
+    <p class="text-ink/70">
+        @(Ok ? "You will not be emailed about new packs. You can turn it back on from your account page any time."
+             : "The link is invalid or was already used. If you are logged in, change the setting from your account page.")
+    </p>
+    <a href="account" class="inline-block rounded-full bg-ink px-5 py-2 text-sm font-semibold text-cream hover:bg-ink/85">Your account</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "ok")] private string? OkFlag { get; set; }
+
+    private bool Ok => OkFlag == "1";
+}

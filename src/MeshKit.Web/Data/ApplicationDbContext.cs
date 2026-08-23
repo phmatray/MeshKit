@@ -11,6 +11,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 
     public DbSet<SampleDownload> SampleDownloads => Set<SampleDownload>();
 
+    public DbSet<PackAnnouncement> PackAnnouncements => Set<PackAnnouncement>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -28,6 +30,12 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
         {
             entitlement.HasIndex(e => new { e.UserId, e.PackSlug }).IsUnique();
             entitlement.Property(e => e.PackSlug).HasMaxLength(128);
+        });
+
+        builder.Entity<PackAnnouncement>(announcement =>
+        {
+            announcement.HasIndex(a => a.PackSlug).IsUnique();
+            announcement.Property(a => a.PackSlug).HasMaxLength(128);
         });
 
         builder.Entity<SampleDownload>(sample =>

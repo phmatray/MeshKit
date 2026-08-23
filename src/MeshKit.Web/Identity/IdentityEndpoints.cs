@@ -42,6 +42,23 @@ public static class IdentityEndpoints
             return Results.Redirect(result.Succeeded ? "/account/login?confirmed=1" : "/account/login?confirmed=0");
         });
 
+        // One-click opt-out from release emails: the token is a data-protected user id, so no login is needed
+        // and a forged link can do nothing but fail.
+        app.MapGet("/account/notifications/unsubscribe", async (Notifications.ReleaseAnnouncer announcer, UserManager<ApplicationUser> users, string? token) =>
+        {
+            var userId = announcer.UserIdFromUnsubscribeToken(token);
+            var user = userId is null ? null : await users.FindByIdAsync(userId);
+            if (user is null)
+            {
+                return Results.Redirect("/account/unsubscribed?ok=0");
+            }
+
+            user.NewReleaseOptIn = false;
+            user.NewReleaseOptInAt = null;
+            await users.UpdateAsync(user);
+            return Results.Redirect("/account/unsubscribed?ok=1");
+        });
+
         return app;
     }
 

@@ -6,6 +6,7 @@ using MeshKit.Web.Downloads;
 using MeshKit.Web.Identity;
 using MeshKit.Web.Ingest;
 using MeshKit.Web.Payments;
+using MeshKit.Web.Search;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +48,7 @@ builder.Services.AddScoped<IdentityRedirectManager>();
 
 builder.Services.Configure<CatalogOptions>(builder.Configuration.GetSection(CatalogOptions.Section));
 builder.Services.AddSingleton<ICatalogService, CatalogService>();
+builder.Services.AddSingleton<ISearchService, SearchService>();
 builder.Services.AddScoped<IEntitlementReader, EntitlementReader>();
 
 builder.Services.AddMeshKitPayments(builder.Configuration);

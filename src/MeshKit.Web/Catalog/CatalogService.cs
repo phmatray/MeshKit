@@ -23,6 +23,10 @@ public sealed class CatalogService : ICatalogService
 
     public string RootPath { get; }
 
+    private int _version;
+
+    public int Version => _version;
+
     public IReadOnlyList<PackManifest> Sellable =>
         _packs.Values.Select(p => p.Manifest).Where(m => m.IsSellable).OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase).ToList();
 
@@ -74,6 +78,7 @@ public sealed class CatalogService : ICatalogService
         {
             _logger.LogWarning("Catalog directory {Path} does not exist; the store is empty", RootPath);
             _packs = packs;
+            Interlocked.Increment(ref _version);
             return;
         }
 
@@ -93,6 +98,7 @@ public sealed class CatalogService : ICatalogService
         }
 
         _packs = packs;
+        Interlocked.Increment(ref _version);
         _logger.LogInformation("Catalog loaded: {Total} pack(s), {Sellable} sellable", packs.Count, packs.Values.Count(p => p.Manifest.IsSellable));
     }
 

@@ -22,5 +22,8 @@ public interface ICatalogService
     /// <summary>Root directory of the catalog (where ingest writes).</summary>
     string RootPath { get; }
 
+    /// <summary>Increments on every <see cref="Reload"/>; derived indexes compare it to know they are stale.</summary>
+    int Version { get; }
+
     void Reload();
 }

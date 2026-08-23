@@ -101,7 +101,7 @@ public sealed class SampleDownloadTests : IDisposable
         Assert.Contains("2 skins", lantern);
         Assert.Contains("/catalog/fantasy-props/public/preview/iron-lantern.glb", lantern);
 
-        var snow = await _factory.CreateClientAs(null).GetStringAsync("/packs/fantasy-props?model=iron-lantern&variant=snow");
+        var snow = System.Net.WebUtility.HtmlDecode(await _factory.CreateClientAs(null).GetStringAsync("/packs/fantasy-props?model=iron-lantern&variant=snow"));
         Assert.Contains("/catalog/fantasy-props/public/preview/iron-lantern.snow.glb", snow);   // the viewer shows the skin
         Assert.Contains("Iron Lantern · Snow", snow);
     }

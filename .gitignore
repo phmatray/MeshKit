@@ -7,9 +7,9 @@ TestResults/
 node_modules/
 src/MeshKit.Web/wwwroot/css/app.css
 src/MeshKit.Web/wwwroot/js/model-viewer*.js
-catalog/
-dist/
-data/
+/catalog/
+/dist/
+/data/
 .env
 *.db
 *.db-*

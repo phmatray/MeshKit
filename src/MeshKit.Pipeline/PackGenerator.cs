@@ -17,6 +17,7 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
 
     public async Task<PackManifest> GenerateAsync(PackDefinition definition, string packDirectory, GeneratorOptions options, CancellationToken cancellationToken)
     {
+        var textureImage = ResolveTextureImage(definition.Generation, options.DefinitionDirectory);
         Directory.CreateDirectory(packDirectory);
         var manifestPath = Path.Combine(packDirectory, PackManifestSerializer.FileName);
 
@@ -50,7 +51,7 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
             await semaphore.WaitAsync(abort.Token);
             try
             {
-                var entry = await GenerateModelAsync(definition, model, packDirectory, options, abort.Token);
+                var entry = await GenerateModelAsync(definition, model, packDirectory, options, textureImage, abort.Token);
                 entries[model.Slug] = entry;
             }
             catch (MeshyOutOfCreditsException ex)
@@ -165,9 +166,9 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
                 try
                 {
                     var task = await meshy.GetTaskAsync(entry.RefineTaskId, ct);
-                    if (task.ThumbnailUrl is not null)
+                    if (task.BestThumbnailUrl is { } url)
                     {
-                        thumb = await TryDownloadAsync(new Uri(task.ThumbnailUrl), thumbPath, packDirectory, ct);
+                        thumb = await TryDownloadAsync(new Uri(url), thumbPath, packDirectory, ct);
                     }
                 }
                 catch (Exception ex) when (ex is MeshyApiException or HttpRequestException)
@@ -250,6 +251,32 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
         }
     }
 
+    /// <summary>
+    /// The pack's <c>texture_image</c> as a <c>data:</c> URI, or null when none is set. Read once per run and
+    /// before any Meshy call, so a missing file costs nothing. Meshy accepts base64 data URIs for jpg/jpeg/png.
+    /// </summary>
+    internal static string? ResolveTextureImage(GenerationSettings gen, string? definitionDirectory)
+    {
+        if (gen.TextureImage is null)
+        {
+            return null;
+        }
+
+        var path = Path.GetFullPath(Path.Combine(definitionDirectory ?? Directory.GetCurrentDirectory(), gen.TextureImage));
+        if (!File.Exists(path))
+        {
+            throw new PackDefinitionException($"generation.texture_image '{gen.TextureImage}' not found at {path}.");
+        }
+
+        var mime = Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            var ext => throw new PackDefinitionException($"generation.texture_image '{gen.TextureImage}': Meshy accepts .png, .jpg or .jpeg, not '{ext}'."),
+        };
+        return $"data:{mime};base64,{Convert.ToBase64String(File.ReadAllBytes(path))}";
+    }
+
     private static bool AssetsPresent(ModelEntry entry, string packDirectory)
     {
         var paths = new[] { entry.Thumbnail, entry.Preview }.Concat(entry.Files.Select(f => f.Path));
@@ -257,15 +284,22 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
             && paths.All(p => p is not null && PackPaths.IsSafeRelative(p) && File.Exists(PackPaths.Resolve(packDirectory, p)));
     }
 
-    private async Task<ModelEntry> GenerateModelAsync(PackDefinition pack, ModelDefinition model, string packDirectory, GeneratorOptions options, CancellationToken ct)
+    private async Task<ModelEntry> GenerateModelAsync(PackDefinition pack, ModelDefinition model, string packDirectory, GeneratorOptions options, string? textureImage, CancellationToken ct)
     {
         var entry = ModelEntry.Pending(model);
         var gen = pack.Generation;
         try
         {
-            logger.LogInformation("[{Model}] preview task starting", model.Slug);
+            var ultra = model.Ultra ?? gen.UltraMode;
+            logger.LogInformation("[{Model}] preview task starting{Ultra}", model.Slug, ultra ? " (ultra)" : "");
             var previewId = await meshy.CreatePreviewAsync(
-                new PreviewRequest(model.Prompt, gen.AiModel, gen.ModelType, gen.TargetPolycount, ["glb"]), ct);
+                new PreviewRequest(model.Prompt, gen.AiModel, gen.ModelType, gen.TargetPolycount, ["glb"],
+                    ShouldRemesh: gen.ShouldRemesh,
+                    Topology: gen.Topology,
+                    UltraMode: ultra,
+                    AutoSize: gen.AutoSize,
+                    OriginAt: gen.AutoSize ? gen.OriginAt : null,
+                    AlphaThumbnail: gen.AlphaThumbnail), ct);
             entry = entry with { PreviewTaskId = previewId };
             var preview = await meshy.WaitForTaskAsync(previewId, options.PollInterval, options.TaskTimeout, ct);
 
@@ -278,15 +312,20 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
             await meshy.DownloadAsync(new Uri(previewGlb), PackPaths.Resolve(packDirectory, previewPath), ct);
 
             string? thumbnailPath = null;
-            if (preview.ThumbnailUrl is not null)
+            if (preview.BestThumbnailUrl is { } previewThumb)
             {
                 thumbnailPath = $"{PackPaths.ThumbsDir}/{model.Slug}.png";
-                await meshy.DownloadAsync(new Uri(preview.ThumbnailUrl), PackPaths.Resolve(packDirectory, thumbnailPath), ct);
+                await meshy.DownloadAsync(new Uri(previewThumb), PackPaths.Resolve(packDirectory, thumbnailPath), ct);
             }
 
             logger.LogInformation("[{Model}] refine task starting", model.Slug);
+            // Meshy takes a texture prompt OR a reference image: the model's own prompt wins over the pack palette.
             var refineId = await meshy.CreateRefineAsync(
-                new RefineRequest(previewId, gen.EnablePbr, gen.TextureResolution, model.TexturePrompt, gen.AiModel, gen.TargetFormats), ct);
+                new RefineRequest(previewId, gen.EnablePbr, gen.TextureResolution, model.TexturePrompt, gen.AiModel, gen.TargetFormats,
+                    TextureImageUrl: model.TexturePrompt is null ? textureImage : null,
+                    AutoSize: gen.AutoSize,
+                    OriginAt: gen.AutoSize ? gen.OriginAt : null,
+                    AlphaThumbnail: gen.AlphaThumbnail), ct);
             entry = entry with { RefineTaskId = refineId };
             var refined = await meshy.WaitForTaskAsync(refineId, options.PollInterval, options.TaskTimeout, ct);
 
@@ -316,9 +355,9 @@ public sealed class PackGenerator(IMeshyClient meshy, ILogger<PackGenerator> log
             // Always keep the textured preview assets next to the clay ones: switching modes later is then
             // a manifest change, never a regeneration.
             var texturedPreview = await PublishTexturedPreviewAsync(model.Slug, files, packDirectory, ct);
-            var texturedThumb = refined.ThumbnailUrl is null
+            var texturedThumb = refined.BestThumbnailUrl is null
                 ? null
-                : await TryDownloadAsync(new Uri(refined.ThumbnailUrl), PackPaths.TexturedThumbnail(model.Slug), packDirectory, ct);
+                : await TryDownloadAsync(new Uri(refined.BestThumbnailUrl), PackPaths.TexturedThumbnail(model.Slug), packDirectory, ct);
 
             logger.LogInformation("[{Model}] done: {Files} file(s), {Credits} credits", model.Slug, files.Count, preview.ConsumedCredits + refined.ConsumedCredits);
             var done = entry with

@@ -49,7 +49,14 @@ public static class PackDefinitionLoader
                 EnablePbr: gen.EnablePbr ?? defaults.EnablePbr,
                 TextureResolution: gen.TextureResolution ?? defaults.TextureResolution,
                 TargetFormats: gen.TargetFormats is { Count: > 0 } ? gen.TargetFormats : defaults.TargetFormats,
-                Preview: gen.Preview ?? defaults.Preview);
+                Preview: gen.Preview ?? defaults.Preview,
+                ShouldRemesh: gen.ShouldRemesh ?? defaults.ShouldRemesh,
+                Topology: gen.Topology ?? defaults.Topology,
+                UltraMode: gen.UltraMode ?? defaults.UltraMode,
+                AutoSize: gen.AutoSize ?? defaults.AutoSize,
+                OriginAt: gen.OriginAt ?? defaults.OriginAt,
+                AlphaThumbnail: gen.AlphaThumbnail ?? defaults.AlphaThumbnail,
+                TextureImage: string.IsNullOrWhiteSpace(gen.TextureImage) ? null : gen.TextureImage.Trim());
 
         var models = (raw.Models ?? []).Select((m, i) => new ModelDefinition(
             Slug: Require(m.Slug, $"models[{i}].slug"),
@@ -57,7 +64,8 @@ public static class PackDefinitionLoader
             Prompt: Require(m.Prompt, $"models[{i}].prompt"),
             TexturePrompt: string.IsNullOrWhiteSpace(m.TexturePrompt) ? null : m.TexturePrompt,
             Tags: NormalizeTags(m.Tags),
-            Category: string.IsNullOrWhiteSpace(m.Category) ? null : m.Category.Trim())).ToList();
+            Category: string.IsNullOrWhiteSpace(m.Category) ? null : m.Category.Trim(),
+            Ultra: m.Ultra)).ToList();
 
         var license = raw.License switch
         {
@@ -78,7 +86,7 @@ public static class PackDefinitionLoader
             Models: models,
             Tags: NormalizeTags(raw.Tags),
             Category: raw.Category?.Trim() ?? "props",
-            Style: raw.Style?.Trim() ?? (generation.ModelType == "lowpoly" ? "lowpoly" : "stylized"),
+            Style: raw.Style?.Trim() ?? (generation.ModelType == GenerationSettings.ModelTypeLowpoly || generation.ShouldRemesh ? "lowpoly" : "stylized"),
             License: license);
     }
 
@@ -126,6 +134,13 @@ public static class PackDefinitionLoader
         public string? TextureResolution { get; set; }
         public List<string>? TargetFormats { get; set; }
         public string? Preview { get; set; }
+        public bool? ShouldRemesh { get; set; }
+        public string? Topology { get; set; }
+        public bool? UltraMode { get; set; }
+        public bool? AutoSize { get; set; }
+        public string? OriginAt { get; set; }
+        public bool? AlphaThumbnail { get; set; }
+        public string? TextureImage { get; set; }
     }
 
     private sealed class ModelYaml
@@ -136,5 +151,6 @@ public static class PackDefinitionLoader
         public string? TexturePrompt { get; set; }
         public List<string>? Tags { get; set; }
         public string? Category { get; set; }
+        public bool? Ultra { get; set; }
     }
 }

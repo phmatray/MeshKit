@@ -1,21 +1,34 @@
 namespace MeshKit.Meshy;
 
 /// <summary>Stage 1 of text-to-3D: an untextured mesh. Doubles as MeshKit's free in-browser preview.</summary>
+/// <param name="ShouldRemesh">Meshy applies <paramref name="TargetPolycount"/> and <paramref name="Topology"/> only when true.</param>
+/// <param name="UltraMode">+5 credits, Meshy 7 / latest only.</param>
 public sealed record PreviewRequest(
     string Prompt,
     string AiModel,
     string ModelType,
     int? TargetPolycount,
-    IReadOnlyList<string> TargetFormats);
+    IReadOnlyList<string> TargetFormats,
+    bool ShouldRemesh = false,
+    string? Topology = null,
+    bool UltraMode = false,
+    bool AutoSize = false,
+    string? OriginAt = null,
+    bool AlphaThumbnail = false);
 
 /// <summary>Stage 2: textures the preview mesh. This is the paid asset.</summary>
+/// <param name="TextureImageUrl">Public URL or <c>data:</c> URI. Meshy accepts this <em>or</em> <paramref name="TexturePrompt"/>, never both.</param>
 public sealed record RefineRequest(
     string PreviewTaskId,
     bool EnablePbr,
     string TextureResolution,
     string? TexturePrompt,
     string AiModel,
-    IReadOnlyList<string> TargetFormats);
+    IReadOnlyList<string> TargetFormats,
+    string? TextureImageUrl = null,
+    bool AutoSize = false,
+    string? OriginAt = null,
+    bool AlphaThumbnail = false);
 
 public enum MeshyTaskStatus
 {
@@ -36,8 +49,12 @@ public sealed record MeshyTask(
     string? ThumbnailUrl,
     IReadOnlyList<IReadOnlyDictionary<string, string>> TextureUrls,
     string? ErrorMessage,
-    int ConsumedCredits)
+    int ConsumedCredits,
+    string? AlphaThumbnailUrl = null)
 {
+    /// <summary>The transparent render when <c>alpha_thumbnail</c> was requested, else the opaque one.</summary>
+    public string? BestThumbnailUrl => AlphaThumbnailUrl ?? ThumbnailUrl;
+
     public bool IsTerminal => Status is MeshyTaskStatus.Succeeded or MeshyTaskStatus.Failed or MeshyTaskStatus.Canceled;
 }
 

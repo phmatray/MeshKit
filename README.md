@@ -40,9 +40,15 @@ name: Low-Poly Fantasy Props
 description: Eight game-ready fantasy props …
 price: { amount: 1900, currency: eur }          # minor units, lowercase ISO code
 generation:
-  ai_model: latest                               # meshy-5 | meshy-6 | meshy-7 | latest
-  model_type: lowpoly                            # standard | smart-topology | lowpoly
+  ai_model: latest                               # meshy-5 | meshy-6 | meshy-7 | latest (= Meshy 7) | meshy-t2
+  model_type: standard                           # standard | smart-topology (needs meshy-t2)
+  should_remesh: true                            # REQUIRED for target_polycount/topology to apply on Meshy 6/7
+  topology: triangle                             # triangle | quad
   target_polycount: 4000
+  auto_size: true                                # real-world scale, pivot at origin_at (bottom | center)
+  alpha_thumbnail: true                          # transparent thumbnails (default)
+  ultra_mode: false                              # +5 credits/model; per-model override: `ultra: true`
+  texture_image: palette.png                     # optional, relative to this file: one reference image for the whole pack
   enable_pbr: true
   texture_resolution: 2k                         # 2k | 4k | 8k
   target_formats: [glb, fbx, obj, usdz]          # glb is mandatory (the preview needs it)
@@ -50,8 +56,12 @@ models:
   - slug: treasure-chest
     name: Treasure Chest
     prompt: a closed wooden treasure chest with iron bands, low poly game asset, stylized
-    texture_prompt: weathered oak planks, rusted iron bands   # optional
+    texture_prompt: weathered oak planks, rusted iron bands   # optional; replaces texture_image for this model
+    ultra: true                                               # optional; hero pieces only
 ```
+
+The validator refuses a `target_polycount` without `should_remesh: true` — Meshy silently ignores the budget
+otherwise, and the first fantasy pack shipped a 22k-triangle campfire that way.
 
 1. Add the repository secret `MESHY_API_KEY`. Optionally `MESHKIT_INGEST_URL`
    (`https://<store>/api/ingest`) and `MESHKIT_INGEST_TOKEN` (the store's `MESHKIT__INGEST__TOKEN`).

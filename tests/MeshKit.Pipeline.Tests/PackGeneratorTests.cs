@@ -21,7 +21,7 @@ public sealed class PackGeneratorTests : IDisposable
         Name: "Props",
         Description: "d",
         Price: new Price(1900, "eur"),
-        Generation: GenerationSettings.Default with { TargetFormats = ["glb", "fbx"], EnablePbr = true, ModelType = "lowpoly", Preview = preview },
+        Generation: GenerationSettings.Default with { TargetFormats = ["glb", "fbx"], EnablePbr = true, ShouldRemesh = true, TargetPolycount = 4000, Preview = preview },
         Models: models.Select(m => new ModelDefinition(m, m.ToUpperInvariant(), "prompt " + m, m == "chest" ? "oak" : null, m == "chest" ? ["loot", "wood"] : [], null)).ToList(),
         Tags: ["fantasy"],
         Category: "props",
@@ -78,12 +78,70 @@ public sealed class PackGeneratorTests : IDisposable
         Assert.DoesNotContain("{{", publicLicense);
 
         var preview = Assert.Single(_meshy.PreviewRequests);
-        Assert.Equal("lowpoly", preview.ModelType);
+        Assert.Equal("standard", preview.ModelType);
+        Assert.True(preview.ShouldRemesh);
+        Assert.Equal(4000, preview.TargetPolycount);
+        Assert.True(preview.AlphaThumbnail);
         Assert.Equal(["glb"], preview.TargetFormats);
         var refine = Assert.Single(_meshy.RefineRequests);
         Assert.True(refine.EnablePbr);
         Assert.Equal("oak", refine.TexturePrompt);
         Assert.Equal(["glb", "fbx"], refine.TargetFormats);
+    }
+
+    [Fact]
+    public async Task Levers_reach_both_meshy_tasks_and_ultra_is_per_model()
+    {
+        var definition = Definition("chest", "barrel") with
+        {
+            Generation = Definition().Generation with { Topology = "quad", UltraMode = true, AutoSize = true, OriginAt = "center" },
+        };
+        definition = definition with { Models = definition.Models.Select(m => m.Slug == "barrel" ? m with { Ultra = false } : m).ToList() };
+
+        await Generator().GenerateAsync(definition, PackDir, Fast, CancellationToken.None);
+
+        var chest = _meshy.PreviewRequests.Single(r => r.Prompt == "prompt chest");
+        var barrel = _meshy.PreviewRequests.Single(r => r.Prompt == "prompt barrel");
+        Assert.Equal(("quad", true, true, "center"), (chest.Topology, chest.UltraMode, chest.AutoSize, chest.OriginAt));
+        Assert.False(barrel.UltraMode);
+        Assert.All(_meshy.RefineRequests, r => Assert.Equal((true, "center", true), (r.AutoSize, r.OriginAt, r.AlphaThumbnail)));
+    }
+
+    [Fact]
+    public async Task Alpha_thumbnail_is_preferred_when_meshy_returns_one()
+    {
+        _meshy.Outcomes["prev-prompt chest"] = () => FakeMeshyClient.Succeeded("prev-prompt chest", "glb") with { AlphaThumbnailUrl = "https://cdn.test/alpha.png" };
+
+        await Generator().GenerateAsync(Definition("chest"), PackDir, Fast, CancellationToken.None);
+
+        Assert.Contains(_meshy.Downloads, d => d.Url.ToString() == "https://cdn.test/alpha.png" && d.Path.EndsWith("public/thumbs/chest.png", StringComparison.Ordinal));
+        Assert.DoesNotContain(_meshy.Downloads, d => d.Url.ToString() == "https://cdn.test/prev-prompt chest/thumb.png");
+    }
+
+    [Fact]
+    public async Task Texture_image_is_sent_as_a_data_uri_unless_the_model_has_its_own_prompt()
+    {
+        var defDir = Directory.CreateDirectory(Path.Combine(_root.FullName, "packs"));
+        File.WriteAllBytes(Path.Combine(defDir.FullName, "palette.png"), [0x89, 0x50, 0x4E, 0x47]);
+        var definition = Definition("chest", "barrel") with { Generation = Definition().Generation with { TextureImage = "palette.png" } };
+
+        await Generator().GenerateAsync(definition, PackDir, Fast with { DefinitionDirectory = defDir.FullName }, CancellationToken.None);
+
+        var chest = _meshy.RefineRequests.Single(r => r.PreviewTaskId == "prev-prompt chest");
+        var barrel = _meshy.RefineRequests.Single(r => r.PreviewTaskId == "prev-prompt barrel");
+        Assert.Equal("oak", chest.TexturePrompt);
+        Assert.Null(chest.TextureImageUrl);
+        Assert.Null(barrel.TexturePrompt);
+        Assert.Equal("data:image/png;base64," + Convert.ToBase64String([0x89, 0x50, 0x4E, 0x47]), barrel.TextureImageUrl);
+    }
+
+    [Fact]
+    public async Task Missing_texture_image_fails_before_any_meshy_call()
+    {
+        var definition = Definition("chest") with { Generation = Definition().Generation with { TextureImage = "missing.png" } };
+
+        await Assert.ThrowsAsync<PackDefinitionException>(() => Generator().GenerateAsync(definition, PackDir, Fast with { DefinitionDirectory = _root.FullName }, CancellationToken.None));
+        Assert.Empty(_meshy.PreviewRequests);
     }
 
     [Fact]

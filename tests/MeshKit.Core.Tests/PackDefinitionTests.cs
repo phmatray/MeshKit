@@ -18,7 +18,8 @@ public class PackDefinitionTests
           currency: eur
         generation:
           ai_model: latest
-          model_type: lowpoly
+          model_type: standard
+          should_remesh: true
           target_polycount: 5000
           enable_pbr: true
           texture_resolution: 2k
@@ -45,7 +46,8 @@ public class PackDefinitionTests
         Assert.Equal("Low-Poly Fantasy Props", pack.Name);
         Assert.Equal(1900, pack.Price.Amount);
         Assert.Equal("eur", pack.Price.Currency);
-        Assert.Equal("lowpoly", pack.Generation.ModelType);
+        Assert.Equal("standard", pack.Generation.ModelType);
+        Assert.True(pack.Generation.ShouldRemesh);
         Assert.Equal(5000, pack.Generation.TargetPolycount);
         Assert.True(pack.Generation.EnablePbr);
         Assert.Equal("2k", pack.Generation.TextureResolution);
@@ -71,7 +73,7 @@ public class PackDefinitionTests
             slug: a
             name: A
             price: { amount: 100, currency: usd }
-            generation: { model_type: lowpoly }
+            generation: { model_type: standard, should_remesh: true }
             models:
               - { slug: m, name: M, prompt: p }
             """);

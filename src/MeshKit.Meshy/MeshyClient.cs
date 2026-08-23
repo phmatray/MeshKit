@@ -31,7 +31,13 @@ public sealed class MeshyClient(HttpClient http, MeshyOptions options, ILogger<M
             prompt = request.Prompt,
             ai_model = request.AiModel,
             model_type = request.ModelType,
+            should_remesh = request.ShouldRemesh,
+            topology = request.Topology,
             target_polycount = request.TargetPolycount,
+            ultra_mode = request.UltraMode,
+            auto_size = request.AutoSize,
+            origin_at = request.OriginAt,
+            alpha_thumbnail = request.AlphaThumbnail,
             target_formats = request.TargetFormats,
         };
         return await CreateTaskAsync(body, cancellationToken);
@@ -46,7 +52,11 @@ public sealed class MeshyClient(HttpClient http, MeshyOptions options, ILogger<M
             enable_pbr = request.EnablePbr,
             texture_resolution = request.TextureResolution,
             texture_prompt = request.TexturePrompt,
+            texture_image_url = request.TextureImageUrl,
             ai_model = request.AiModel,
+            auto_size = request.AutoSize,
+            origin_at = request.OriginAt,
+            alpha_thumbnail = request.AlphaThumbnail,
             target_formats = request.TargetFormats,
         };
         return await CreateTaskAsync(body, cancellationToken);
@@ -212,6 +222,7 @@ public sealed class MeshyClient(HttpClient http, MeshyOptions options, ILogger<M
         public int Progress { get; set; }
         public Dictionary<string, string>? ModelUrls { get; set; }
         public string? ThumbnailUrl { get; set; }
+        public string? AlphaThumbnailUrl { get; set; }
         public List<Dictionary<string, string>>? TextureUrls { get; set; }
         public TaskErrorDto? TaskError { get; set; }
         public int ConsumedCredits { get; set; }
@@ -232,7 +243,8 @@ public sealed class MeshyClient(HttpClient http, MeshyOptions options, ILogger<M
             ThumbnailUrl,
             (TextureUrls ?? []).Select(IReadOnlyDictionary<string, string> (t) => t.Where(kv => !string.IsNullOrEmpty(kv.Value)).ToDictionary(kv => kv.Key, kv => kv.Value)).ToList(),
             TaskError?.Message,
-            ConsumedCredits);
+            ConsumedCredits,
+            string.IsNullOrEmpty(AlphaThumbnailUrl) ? null : AlphaThumbnailUrl);
     }
 
     private sealed class TaskErrorDto

@@ -17,13 +17,16 @@ public sealed record PackDefinition(
     LicenseChoice License);
 
 /// <param name="Tags">Model-level tags; pack tags are inherited by every model at index time.</param>
+/// <param name="TexturePrompt">Overrides the pack's <c>texture_image</c> for this model (Meshy accepts one or the other, never both).</param>
+/// <param name="Ultra">Overrides <see cref="GenerationSettings.UltraMode"/> for this model: hero pieces on, filler off.</param>
 public sealed record ModelDefinition(
     string Slug,
     string Name,
     string Prompt,
     string? TexturePrompt,
     IReadOnlyList<string> Tags,
-    string? Category);
+    string? Category,
+    bool? Ultra = null);
 
 /// <summary>
 /// Either a built-in template id (<see cref="MeshKitStandard"/>) or a path to a custom text file,
@@ -47,6 +50,20 @@ public sealed record Price(long Amount, string Currency);
 /// actually judge; rippable from the viewer, which is the industry norm) or <c>clay</c> (the untextured
 /// preview-stage mesh, nothing of the paid asset leaves the server).
 /// </param>
+/// <param name="ShouldRemesh">
+/// Meshy only honours <see cref="TargetPolycount"/> and <see cref="Topology"/> during its remesh phase, which is
+/// off by default on Meshy 6/7. The first fantasy pack shipped a 22,463-triangle campfire under a 4,000 budget for
+/// exactly this reason.
+/// </param>
+/// <param name="Topology"><c>triangle</c> (decimated — what the store counts) or <c>quad</c> (quad-dominant, for editing).</param>
+/// <param name="UltraMode">Finer preview geometry; +5 credits per model, Meshy 7 only. Per-model override: <see cref="ModelDefinition.Ultra"/>.</param>
+/// <param name="AutoSize">Let Meshy estimate real-world size so a chest is chest-sized in the engine, not 1.9 m wide.</param>
+/// <param name="OriginAt">Pivot placement when <see cref="AutoSize"/> is on: <c>bottom</c> (floor-level, game-ready) or <c>center</c>.</param>
+/// <param name="AlphaThumbnail">Transparent-background thumbnails (free). On by default: the store renders them on its own surfaces.</param>
+/// <param name="TextureImage">
+/// Path, relative to the pack YAML, of one reference image that textures every model — the lever for a coherent palette
+/// across a pack. A model's <c>texture_prompt</c> replaces it for that model.
+/// </param>
 public sealed record GenerationSettings(
     string AiModel,
     string ModelType,
@@ -54,14 +71,30 @@ public sealed record GenerationSettings(
     bool EnablePbr,
     string TextureResolution,
     IReadOnlyList<string> TargetFormats,
-    string Preview)
+    string Preview,
+    bool ShouldRemesh = false,
+    string Topology = "triangle",
+    bool UltraMode = false,
+    bool AutoSize = false,
+    string OriginAt = "bottom",
+    bool AlphaThumbnail = true,
+    string? TextureImage = null)
 {
     public const string PreviewTextured = "textured";
     public const string PreviewClay = "clay";
 
+    public const string ModelTypeStandard = "standard";
+    public const string ModelTypeSmartTopology = "smart-topology";
+
+    /// <summary>Deprecated by Meshy; kept so an old definition gets a pointed error instead of "unknown".</summary>
+    public const string ModelTypeLowpoly = "lowpoly";
+
+    /// <summary>The only model Meshy serves for <see cref="ModelTypeSmartTopology"/>.</summary>
+    public const string AiModelSmartTopology = "meshy-t2";
+
     public static readonly GenerationSettings Default = new(
         AiModel: "latest",
-        ModelType: "standard",
+        ModelType: ModelTypeStandard,
         TargetPolycount: null,
         EnablePbr: false,
         TextureResolution: "2k",
@@ -79,10 +112,20 @@ public sealed record GenerationSettings(
         new HashSet<string>(StringComparer.Ordinal) { PreviewTextured, PreviewClay };
 
     public static readonly IReadOnlySet<string> KnownAiModels =
-        new HashSet<string>(StringComparer.Ordinal) { "latest", "meshy-5", "meshy-6", "meshy-7" };
+        new HashSet<string>(StringComparer.Ordinal) { "latest", "meshy-5", "meshy-6", "meshy-7", AiModelSmartTopology };
+
+    /// <summary>Models that support <see cref="UltraMode"/> (Meshy 7 and whatever <c>latest</c> resolves to).</summary>
+    public static readonly IReadOnlySet<string> UltraCapableAiModels =
+        new HashSet<string>(StringComparer.Ordinal) { "latest", "meshy-7" };
 
     public static readonly IReadOnlySet<string> KnownModelTypes =
-        new HashSet<string>(StringComparer.Ordinal) { "standard", "smart-topology", "lowpoly" };
+        new HashSet<string>(StringComparer.Ordinal) { ModelTypeStandard, ModelTypeSmartTopology };
+
+    public static readonly IReadOnlySet<string> KnownTopologies =
+        new HashSet<string>(StringComparer.Ordinal) { "triangle", "quad" };
+
+    public static readonly IReadOnlySet<string> KnownOrigins =
+        new HashSet<string>(StringComparer.Ordinal) { "bottom", "center" };
 
     public static readonly IReadOnlySet<string> KnownTextureResolutions =
         new HashSet<string>(StringComparer.Ordinal) { "2k", "4k", "8k" };

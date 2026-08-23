@@ -84,7 +84,12 @@ internal static class Cli
 
         var packDir = Path.Combine(outDir, definition.Slug);
         Console.WriteLine($"Pack '{definition.Slug}' — {definition.Models.Count} model(s), {(definition.Price.Amount / 100m).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)} {definition.Price.Currency.ToUpperInvariant()}");
-        Console.WriteLine($"  formats: {string.Join(", ", definition.Generation.TargetFormats)} · model_type: {definition.Generation.ModelType} · pbr: {definition.Generation.EnablePbr}");
+        var gen = definition.Generation;
+        Console.WriteLine($"  formats: {string.Join(", ", gen.TargetFormats)} · model_type: {gen.ModelType} · pbr: {gen.EnablePbr}");
+        Console.WriteLine($"  mesh:    {(gen.ShouldRemesh ? $"remesh to ≤{gen.TargetPolycount?.ToString() ?? "default"} {gen.Topology}s" : "no remesh (polycount not enforced)")}"
+            + $" · auto_size: {gen.AutoSize}{(gen.AutoSize ? $" ({gen.OriginAt})" : "")} · alpha_thumbnail: {gen.AlphaThumbnail}"
+            + $" · ultra: {definition.Models.Count(m => m.Ultra ?? gen.UltraMode)}/{definition.Models.Count} model(s)"
+            + (gen.TextureImage is null ? "" : $" · texture_image: {gen.TextureImage}"));
         Console.WriteLine($"  output:  {packDir}");
         if (dryRun)
         {

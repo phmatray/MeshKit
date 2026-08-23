@@ -12,9 +12,15 @@ price:
   amount: 1900
   currency: eur
 generation:
-  ai_model: latest
-  model_type: lowpoly
+  ai_model: latest                 # resolves to Meshy 7
+  model_type: standard             # 'lowpoly' is deprecated by Meshy
+  should_remesh: true              # without it Meshy IGNORES target_polycount (the first run shipped a 22k-tri campfire)
+  topology: triangle               # what the store counts; 'quad' for artist-friendly editing meshes
   target_polycount: 5000
+  auto_size: true                  # real-world scale: a chest is chest-sized in the engine, not 1.9 m wide
+  origin_at: bottom                # floor-level pivot, the game-ready convention
+  alpha_thumbnail: true            # transparent renders for the store cards
+  ultra_mode: false                # +5 credits/model; switched on per hero model below with `ultra: true`
   enable_pbr: true
   texture_resolution: 2k
   target_formats: [glb, fbx, obj, usdz]
@@ -22,6 +28,7 @@ generation:
 models:
   - slug: longsword
     name: Longsword
+    ultra: true
     prompt: a medieval longsword with a straight double-edged blade, a cross guard and a leather-wrapped grip, stylized game asset, chunky proportions
     texture_prompt: polished steel blade, dark brown leather grip, brass pommel
     tags: [sword, blade, steel, knight]

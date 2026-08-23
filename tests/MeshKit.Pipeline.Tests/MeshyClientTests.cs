@@ -8,7 +8,7 @@ namespace MeshKit.Pipeline.Tests;
 public class MeshyClientTests
 {
     private static readonly PreviewRequest Preview = new(
-        Prompt: "a chest", AiModel: "latest", ModelType: "lowpoly", TargetPolycount: 5000, TargetFormats: ["glb", "fbx"]);
+        Prompt: "a chest", AiModel: "latest", ModelType: "standard", TargetPolycount: 5000, TargetFormats: ["glb", "fbx"]);
 
     private static (MeshyClient Client, FakeHttpMessageHandler Handler) Create(MeshyOptions? options = null)
     {
@@ -34,9 +34,59 @@ public class MeshyClientTests
         using var doc = JsonDocument.Parse(body!);
         Assert.Equal("preview", doc.RootElement.GetProperty("mode").GetString());
         Assert.Equal("a chest", doc.RootElement.GetProperty("prompt").GetString());
-        Assert.Equal("lowpoly", doc.RootElement.GetProperty("model_type").GetString());
+        Assert.Equal("standard", doc.RootElement.GetProperty("model_type").GetString());
         Assert.Equal(5000, doc.RootElement.GetProperty("target_polycount").GetInt32());
         Assert.Equal(2, doc.RootElement.GetProperty("target_formats").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task CreatePreview_posts_the_meshy7_levers()
+    {
+        var (client, handler) = Create();
+        handler.Enqueue(HttpStatusCode.Accepted, """{"result":"task-1"}""");
+
+        await client.CreatePreviewAsync(Preview with
+        {
+            ShouldRemesh = true, Topology = "quad", UltraMode = true, AutoSize = true, OriginAt = "center", AlphaThumbnail = true,
+        }, CancellationToken.None);
+
+        using var doc = JsonDocument.Parse(handler.Requests[0].Body!);
+        Assert.True(doc.RootElement.GetProperty("should_remesh").GetBoolean());
+        Assert.Equal("quad", doc.RootElement.GetProperty("topology").GetString());
+        Assert.True(doc.RootElement.GetProperty("ultra_mode").GetBoolean());
+        Assert.True(doc.RootElement.GetProperty("auto_size").GetBoolean());
+        Assert.Equal("center", doc.RootElement.GetProperty("origin_at").GetString());
+        Assert.True(doc.RootElement.GetProperty("alpha_thumbnail").GetBoolean());
+    }
+
+    [Fact]
+    public async Task CreateRefine_posts_texture_image_and_size_levers()
+    {
+        var (client, handler) = Create();
+        handler.Enqueue(HttpStatusCode.Accepted, """{"result":"task-2"}""");
+
+        await client.CreateRefineAsync(
+            new RefineRequest("task-1", EnablePbr: true, TextureResolution: "2k", TexturePrompt: null, AiModel: "latest", TargetFormats: ["glb"],
+                TextureImageUrl: "data:image/png;base64,AAAA", AutoSize: true, OriginAt: "bottom", AlphaThumbnail: true),
+            CancellationToken.None);
+
+        using var doc = JsonDocument.Parse(handler.Requests[0].Body!);
+        Assert.Equal("data:image/png;base64,AAAA", doc.RootElement.GetProperty("texture_image_url").GetString());
+        Assert.False(doc.RootElement.TryGetProperty("texture_prompt", out _));
+        Assert.True(doc.RootElement.GetProperty("auto_size").GetBoolean());
+        Assert.Equal("bottom", doc.RootElement.GetProperty("origin_at").GetString());
+        Assert.True(doc.RootElement.GetProperty("alpha_thumbnail").GetBoolean());
+    }
+
+    [Fact]
+    public async Task GetTask_maps_alpha_thumbnail_url()
+    {
+        var (client, handler) = Create();
+        handler.Enqueue(HttpStatusCode.OK, """{"id":"task-2","status":"SUCCEEDED","progress":100,"model_urls":{"glb":"https://cdn/x.glb"},"thumbnail_url":"https://cdn/t.png","alpha_thumbnail_url":"https://cdn/t-alpha.png"}""");
+
+        var task = await client.GetTaskAsync("task-2", CancellationToken.None);
+
+        Assert.Equal("https://cdn/t-alpha.png", task.AlphaThumbnailUrl);
     }
 
     [Fact]

@@ -22,9 +22,12 @@ public static class IngestEndpoints
                 return Results.Unauthorized();
             }
 
+            // Both limits must follow MaxUploadBytes: Kestrel's request body cap AND the multipart
+            // parser's (which defaults to 128 MB — a real pack is 250+ MB).
+            var max = options.Value.MaxUploadBytes;
             if (http.Features.Get<IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit)
             {
-                limit.MaxRequestBodySize = options.Value.MaxUploadBytes;
+                limit.MaxRequestBodySize = max;
             }
 
             if (!http.Request.HasFormContentType)
@@ -32,7 +35,21 @@ public static class IngestEndpoints
                 return Results.BadRequest(new { error = "Send the pack as multipart/form-data with a 'file' field." });
             }
 
-            var form = await http.Request.ReadFormAsync(cancellationToken);
+            http.Features.Set<IFormFeature>(new FormFeature(http.Request, new FormOptions
+            {
+                MultipartBodyLengthLimit = max,
+                MultipartBoundaryLengthLimit = 256,
+            }));
+
+            IFormCollection form;
+            try
+            {
+                form = await http.Request.ReadFormAsync(cancellationToken);
+            }
+            catch (Exception ex) when (ex is InvalidDataException or Microsoft.AspNetCore.Http.BadHttpRequestException)
+            {
+                return Results.Problem($"Upload rejected: {ex.Message} (limit {max} bytes).", statusCode: StatusCodes.Status413PayloadTooLarge);
+            }
             var file = form.Files["file"];
             if (file is null || file.Length == 0)
             {

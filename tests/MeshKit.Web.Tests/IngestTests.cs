@@ -148,6 +148,20 @@ public sealed class IngestTests : IDisposable
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Upload_above_the_configured_limit_is_413_and_under_it_is_accepted()
+    {
+        var zip = PackZip("sized");
+        using var limited = _factory.WithWebHostBuilder(b => b.UseSetting("MeshKit:Ingest:MaxUploadBytes", (zip.Length - 1).ToString()));
+        var client = limited.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", MeshKitWebFactory.IngestToken);
+
+        var tooBig = await client.PostAsync("/api/ingest", Upload(zip));
+
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, tooBig.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await Client().PostAsync("/api/ingest", Upload(zip))).StatusCode);
+    }
+
     private sealed record ErrorBody(string Error);
 
     public void Dispose()

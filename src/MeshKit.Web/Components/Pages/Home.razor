@@ -12,8 +12,11 @@
 <section class="grid items-center gap-10 py-6 md:grid-cols-2">
     <div class="space-y-6">
         <h1 class="text-4xl font-bold leading-tight tracking-tight md:text-5xl">Game-ready 3D model packs, generated and curated.</h1>
-        <p class="text-lg text-ink/70">Every pack ships as GLB, FBX, OBJ and USDZ with PBR textures. Preview every model in your browser before you buy.</p>
-        <a href="packs" class="inline-block rounded-full bg-coral px-6 py-3 font-semibold text-ink hover:bg-coral-dark">Browse packs</a>
+        <p class="text-lg text-ink/70">Every pack ships as GLB, FBX, OBJ and USDZ with PBR textures. Preview every model in your browser, and download one model per pack for free to try it in your engine before you buy.</p>
+        <div class="flex flex-wrap items-center gap-4">
+            <a href="packs" class="inline-block rounded-full bg-coral px-6 py-3 font-semibold text-ink hover:bg-coral-dark">Browse packs</a>
+            <a href="search?free=true" class="font-semibold underline-offset-4 hover:text-coral-dark hover:underline">Free sample models →</a>
+        </div>
     </div>
     @if (Featured is { } featured)
     {

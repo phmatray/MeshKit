@@ -20,9 +20,10 @@ public sealed record SearchQuery(
     int? MaxTriangles = null,
     SearchSort Sort = SearchSort.Relevance,
     int Page = 1,
-    int PageSize = 24)
+    int PageSize = 24,
+    bool Free = false)
 {
-    public bool HasFilters => !string.IsNullOrWhiteSpace(Text) || Tags is { Count: > 0 } || Category is not null || Style is not null || Format is not null || Pack is not null || MaxTriangles is not null;
+    public bool HasFilters => !string.IsNullOrWhiteSpace(Text) || Tags is { Count: > 0 } || Category is not null || Style is not null || Format is not null || Pack is not null || MaxTriangles is not null || Free;
 }
 
 public sealed record SearchHit(
@@ -39,7 +40,8 @@ public sealed record SearchHit(
     long PriceAmount,
     string PriceCurrency,
     bool PreviewTextured,
-    double Score);
+    double Score,
+    bool IsFree = false);
 
 public sealed record FacetValue(string Value, int Count);
 
@@ -48,7 +50,8 @@ public sealed record SearchFacets(
     IReadOnlyList<FacetValue> Styles,
     IReadOnlyList<FacetValue> Tags,
     IReadOnlyList<FacetValue> Formats,
-    IReadOnlyList<FacetValue> Packs);
+    IReadOnlyList<FacetValue> Packs,
+    int FreeSamples = 0);
 
 public sealed record SearchResult(IReadOnlyList<SearchHit> Hits, int Total, SearchFacets Facets, SearchQuery Query)
 {

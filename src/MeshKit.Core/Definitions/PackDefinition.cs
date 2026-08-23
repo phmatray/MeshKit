@@ -4,6 +4,10 @@ namespace MeshKit.Core.Definitions;
 /// What the producer writes in <c>packs/&lt;slug&gt;.yaml</c>: the commercial identity of a pack
 /// and the prompts that generate its models. Immutable; validated by <see cref="PackDefinitionValidator"/>.
 /// </summary>
+/// <param name="Sample">
+/// Slug of the one model anyone with an account may download for free — "try before you buy": the
+/// objection to a €19 pack is "does it hold up in Blender/Unity", and a preview in the browser cannot answer it.
+/// </param>
 public sealed record PackDefinition(
     string Slug,
     string Name,
@@ -14,7 +18,8 @@ public sealed record PackDefinition(
     IReadOnlyList<string> Tags,
     string Category,
     string Style,
-    LicenseChoice License);
+    LicenseChoice License,
+    string? Sample = null);
 
 /// <param name="Tags">Model-level tags; pack tags are inherited by every model at index time.</param>
 /// <param name="TexturePrompt">Overrides the pack's <c>texture_image</c> for this model (Meshy accepts one or the other, never both).</param>

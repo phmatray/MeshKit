@@ -34,6 +34,20 @@ public sealed class PackCheckoutService(
             CancelUrl = $"{baseUrl}/packs/{pack.Slug}",
             IntegrationIdentifier = IntegrationIdentifier,
             Metadata = new Dictionary<string, string> { [PackSlugMetadataKey] = pack.Slug },
+            // Studios buying assets want a real invoice with their VAT number on it; coupons are how a launch
+            // gets its first buyers. Tax-id collection in payment mode needs a Customer, hence "always".
+            AllowPromotionCodes = true,
+            CustomerCreation = "always",
+            TaxIdCollection = new SessionTaxIdCollectionOptions { Enabled = true },
+            InvoiceCreation = new SessionInvoiceCreationOptions
+            {
+                Enabled = true,
+                InvoiceData = new SessionInvoiceCreationInvoiceDataOptions
+                {
+                    Description = $"{pack.Name} — {pack.Models.Count} 3D models, MeshKit Royalty-Free Asset Licence",
+                    Footer = "Digital content delivered immediately. Licence terms: see the pack page.",
+                },
+            },
             // Digital content, delivered immediately: the buyer's consent to lose the 14-day withdrawal
             // right (EU 2011/83) is recorded on the Stripe page itself, next to the pay button.
             CustomText = new SessionCustomTextOptions

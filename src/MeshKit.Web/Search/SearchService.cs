@@ -40,7 +40,7 @@ public sealed partial class SearchService : ISearchService, IDisposable
             {
                 cmd.CommandText = $"""
                     SELECT m.pack_slug, m.pack_name, m.model_slug, m.name, m.thumbnail, m.tags, m.category, m.style,
-                           m.triangles, m.formats, m.price, m.currency, m.textured, {(ftsJoin.Length > 0 ? "bm25(models_fts, 10.0, 6.0, 4.0, 3.0, 1.0, 0.5)" : "0")} AS score
+                           m.triangles, m.formats, m.price, m.currency, m.textured, {(ftsJoin.Length > 0 ? "bm25(models_fts, 10.0, 6.0, 4.0, 3.0, 1.0, 0.5)" : "0")} AS score, m.free
                     FROM models m {ftsJoin}
                     WHERE {where}
                     ORDER BY {orderBy}
@@ -66,7 +66,8 @@ public sealed partial class SearchService : ISearchService, IDisposable
                         PriceAmount: reader.GetInt64(10),
                         PriceCurrency: reader.GetString(11),
                         PreviewTextured: reader.GetInt64(12) == 1,
-                        Score: reader.GetDouble(13)));
+                        Score: reader.GetDouble(13),
+                        IsFree: reader.GetInt64(14) == 1));
                 }
             }
 
@@ -75,7 +76,8 @@ public sealed partial class SearchService : ISearchService, IDisposable
                 Styles: Facet(db, "m.style", where, parameters, ftsJoin),
                 Tags: TagFacet(db, where, parameters, ftsJoin),
                 Formats: FormatFacet(db, where, parameters, ftsJoin),
-                Packs: Facet(db, "m.pack_name", where, parameters, ftsJoin));
+                Packs: Facet(db, "m.pack_name", where, parameters, ftsJoin),
+                FreeSamples: (int)Scalar<long>(db, $"SELECT COUNT(*) FROM models m {ftsJoin} WHERE {where} AND m.free = 1", parameters));
 
             return new SearchResult(hits, (int)total, facets, query);
         }
@@ -151,6 +153,11 @@ public sealed partial class SearchService : ISearchService, IDisposable
         {
             clauses.Add("(' ' || m.formats || ' ') LIKE $format");
             parameters.Add(("$format", $"% {q.Format.ToLowerInvariant()} %"));
+        }
+
+        if (q.Free)
+        {
+            clauses.Add("m.free = 1");
         }
 
         if (q.MaxTriangles is { } max)
@@ -270,7 +277,8 @@ public sealed partial class SearchService : ISearchService, IDisposable
             CREATE TABLE models (
                 id INTEGER PRIMARY KEY, pack_slug TEXT NOT NULL, pack_name TEXT NOT NULL, model_slug TEXT NOT NULL,
                 name TEXT NOT NULL, thumbnail TEXT, tags TEXT NOT NULL, category TEXT NOT NULL, style TEXT NOT NULL,
-                triangles INTEGER, formats TEXT NOT NULL, price INTEGER NOT NULL, currency TEXT NOT NULL, textured INTEGER NOT NULL);
+                triangles INTEGER, formats TEXT NOT NULL, price INTEGER NOT NULL, currency TEXT NOT NULL, textured INTEGER NOT NULL,
+                free INTEGER NOT NULL DEFAULT 0);
             CREATE TABLE model_tags (model_id INTEGER NOT NULL, tag TEXT NOT NULL);
             CREATE INDEX ix_model_tags ON model_tags(tag, model_id);
             CREATE VIRTUAL TABLE models_fts USING fts5(name, tags, pack_name, category, description, prompt, tokenize = 'porter unicode61');
@@ -292,8 +300,8 @@ public sealed partial class SearchService : ISearchService, IDisposable
                 {
                     cmd.Transaction = tx;
                     cmd.CommandText = """
-                        INSERT INTO models (id, pack_slug, pack_name, model_slug, name, thumbnail, tags, category, style, triangles, formats, price, currency, textured)
-                        VALUES ($id, $ps, $pn, $ms, $name, $thumb, $tags, $cat, $style, $tris, $formats, $price, $cur, $textured)
+                        INSERT INTO models (id, pack_slug, pack_name, model_slug, name, thumbnail, tags, category, style, triangles, formats, price, currency, textured, free)
+                        VALUES ($id, $ps, $pn, $ms, $name, $thumb, $tags, $cat, $style, $tris, $formats, $price, $cur, $textured, $free)
                         """;
                     cmd.Parameters.AddWithValue("$id", id);
                     cmd.Parameters.AddWithValue("$ps", pack.Slug);
@@ -309,6 +317,7 @@ public sealed partial class SearchService : ISearchService, IDisposable
                     cmd.Parameters.AddWithValue("$price", pack.Price.Amount);
                     cmd.Parameters.AddWithValue("$cur", pack.Price.Currency);
                     cmd.Parameters.AddWithValue("$textured", model.PreviewTextured ? 1 : 0);
+                    cmd.Parameters.AddWithValue("$free", pack.SampleModel?.Slug == model.Slug ? 1 : 0);
                     cmd.ExecuteNonQuery();
                 }
 

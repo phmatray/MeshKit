@@ -4,7 +4,7 @@
 
 <PageTitle>@Title</PageTitle>
 <HeadContent>
-    <meta name="description" content="Search every 3D model in the MeshKit catalogue by name, tag, category, format and polygon count." />
+    <meta name="description" content="Search every 3D model in the MeshKit catalogue by name, tag, category, format and polygon count — including the free sample model of every pack." />
     <meta name="robots" content="@(Query.HasFilters ? "noindex,follow" : "index,follow")" />
 </HeadContent>
 
@@ -27,6 +27,15 @@
         @if (Query.HasFilters)
         {
             <a href="search" class="inline-block text-coral-dark underline">Clear all filters</a>
+        }
+        @if (Result.Facets.FreeSamples > 0 || Query.Free)
+        {
+            <section>
+                <h2 class="mb-2 font-semibold">Free samples</h2>
+                <a href="@Link(Query with { Free = !Query.Free, Page = 1 })" class="flex justify-between gap-2 @(Query.Free ? "font-semibold text-coral-dark" : "hover:text-coral-dark")" aria-pressed="@(Query.Free ? "true" : "false")">
+                    <span>Free to download</span><span class="text-ink/50">@Result.Facets.FreeSamples</span>
+                </a>
+            </section>
         }
         <FacetGroup Title="Pack" Param="pack" Values="Result.Facets.Packs" Selected="@Pack" Query="Query" Labels="PackLabels" />
         <FacetGroup Title="Category" Param="category" Values="Result.Facets.Categories" Selected="@Category" Query="Query" />
@@ -86,7 +95,13 @@
                             }
                         </a>
                         <div class="flex flex-1 flex-col gap-2 p-4">
-                            <h3 class="font-semibold leading-tight"><a href="packs/@hit.PackSlug?model=@hit.ModelSlug" class="hover:text-coral-dark">@hit.Name</a></h3>
+                            <h3 class="flex items-center gap-2 font-semibold leading-tight">
+                                <a href="packs/@hit.PackSlug?model=@hit.ModelSlug" class="hover:text-coral-dark">@hit.Name</a>
+                                @if (hit.IsFree)
+                                {
+                                    <span class="rounded-full bg-coral px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink">Free</span>
+                                }
+                            </h3>
                             <p class="text-xs text-ink/60">in <a href="packs/@hit.PackSlug" class="underline-offset-2 hover:underline">@hit.PackName</a> · @Money.Format(hit.PriceAmount, hit.PriceCurrency)</p>
                             <p class="text-xs text-ink/60">
                                 @(hit.Triangles is { } t ? $"{Format.Count(t)} tris · " : "")<span class="uppercase">@string.Join(" · ", hit.Formats)</span>
@@ -124,6 +139,7 @@
     [SupplyParameterFromQuery(Name = "format")] public string? FormatFilter { get; set; }
     [SupplyParameterFromQuery] public string? Pack { get; set; }
     [SupplyParameterFromQuery(Name = "maxtris")] public int? MaxTris { get; set; }
+    [SupplyParameterFromQuery(Name = "free")] public string? FreeFilter { get; set; }
     [SupplyParameterFromQuery] public string? Sort { get; set; }
     [SupplyParameterFromQuery] public int? Page { get; set; }
 
@@ -144,6 +160,7 @@
             Format: Blank(FormatFilter),
             Pack: Blank(Pack),
             MaxTriangles: MaxTris,
+            Free: FreeFilter is "true" or "1",
             Sort: Enum.TryParse<SearchSort>(Sort, ignoreCase: true, out var s) ? s : SearchSort.Relevance,
             Page: Math.Max(1, Page ?? 1));
         Result = SearchService.Search(Query);
@@ -165,6 +182,7 @@
         Add("format", q.Format);
         Add("pack", q.Pack);
         Add("maxtris", q.MaxTriangles?.ToString());
+        if (q.Free) Add("free", "true");
         if (q.Sort != SearchSort.Relevance) Add("sort", q.Sort.ToString().ToLowerInvariant());
         if (q.Page > 1) Add("page", q.Page.ToString());
         return "search" + (parts.Count > 0 ? "?" + string.Join("&", parts) : "");

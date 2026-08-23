@@ -16,6 +16,12 @@ public interface ICatalogService
     /// <summary>Streams a zip of the pack's <c>private/</c> tree, entries prefixed with the slug.</summary>
     Task WritePrivateZipAsync(string slug, Stream destination, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Streams a zip of one model's private files plus the pack's LICENSE.txt, entries prefixed
+    /// <c>&lt;slug&gt;-sample/</c>. Used for the free sample; the caller decides who may have it.
+    /// </summary>
+    Task WriteModelZipAsync(string slug, string modelSlug, Stream destination, CancellationToken cancellationToken);
+
     /// <summary>Absolute pack directory for a slug (exists only for loaded packs).</summary>
     string? PackDirectory(string slug);
 

@@ -38,7 +38,7 @@ public sealed class SeoAndPagesTests : IDisposable
         var second = await client.SendAsync(conditional);
 
         Assert.Equal(HttpStatusCode.NotModified, second.StatusCode);
-        Assert.Equal(0, (await second.Content.ReadAsByteArrayAsync()).Length);
+        Assert.Empty(await second.Content.ReadAsByteArrayAsync());
     }
 
     [Theory]

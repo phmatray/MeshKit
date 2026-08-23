@@ -18,9 +18,13 @@ public sealed record PackManifest(
     IReadOnlyList<string>? Tags = null,
     string? Category = null,
     string? Style = null,
-    PackLicense? License = null)
+    PackLicense? License = null,
+    string? Sample = null)
 {
     public IReadOnlyList<string> TagList => Tags ?? [];
+
+    /// <summary>The free sample model, when the definition names one and it was generated.</summary>
+    public ModelEntry? SampleModel => Sample is null ? null : Models.FirstOrDefault(m => m.Slug == Sample && m.Status == ModelStatus.Succeeded);
 
     public const int CurrentSchemaVersion = 1;
 
@@ -38,7 +42,8 @@ public sealed record PackManifest(
         Tags: definition.Tags,
         Category: definition.Category,
         Style: definition.Style,
-        License: null);
+        License: null,
+        Sample: definition.Sample);
 
     public bool Equals(PackManifest? other) =>
         other is not null
@@ -52,6 +57,7 @@ public sealed record PackManifest(
         && Category == other.Category
         && Style == other.Style
         && License == other.License
+        && Sample == other.Sample
         && Models.SequenceEqual(other.Models);
 
     public override int GetHashCode() => HashCode.Combine(SchemaVersion, Slug, GeneratedAt, Models.Count);

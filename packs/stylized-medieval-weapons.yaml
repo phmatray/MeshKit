@@ -8,6 +8,7 @@ category: weapons
 style: stylized
 license:
   id: meshkit-standard
+sample: dagger                  # free for any account — "try before you buy"
 price:
   amount: 1900
   currency: eur

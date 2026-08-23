@@ -91,6 +91,7 @@ internal static class Cli
             + $" · auto_size: {gen.AutoSize}{(gen.AutoSize ? $" ({gen.OriginAt})" : "")} · alpha_thumbnail: {gen.AlphaThumbnail}"
             + $" · ultra: {definition.Models.Count(m => m.Ultra ?? gen.UltraMode)}/{definition.Models.Count} model(s)"
             + (gen.TextureImage is null ? "" : $" · texture_image: {gen.TextureImage}"));
+        Console.WriteLine($"  sample:  {definition.Sample ?? "none (set `sample: <model>` to offer a free model)"}");
         Console.WriteLine($"  output:  {packDir}");
         if (dryRun)
         {

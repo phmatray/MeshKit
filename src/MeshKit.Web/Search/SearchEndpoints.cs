@@ -5,7 +5,7 @@ public static class SearchEndpoints
     /// <summary>JSON search for tooling and future clients: <c>GET /api/search?q=chest&amp;tag=wooden&amp;format=fbx</c>.</summary>
     public static IEndpointRouteBuilder MapSearchEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/search", (ISearchService search, string? q, string[]? tag, string? category, string? style, string? format, string? pack, int? maxtris, string? sort, int? page, int? pageSize) =>
+        app.MapGet("/api/search", (ISearchService search, string? q, string[]? tag, string? category, string? style, string? format, string? pack, int? maxtris, bool? free, string? sort, int? page, int? pageSize) =>
         {
             var query = new SearchQuery(
                 Text: q,
@@ -15,6 +15,7 @@ public static class SearchEndpoints
                 Format: format,
                 Pack: pack,
                 MaxTriangles: maxtris,
+                Free: free == true,
                 Sort: Enum.TryParse<SearchSort>(sort, ignoreCase: true, out var s) ? s : SearchSort.Relevance,
                 Page: Math.Max(1, page ?? 1),
                 PageSize: Math.Clamp(pageSize ?? 24, 1, 100));
@@ -38,6 +39,8 @@ public static class SearchEndpoints
                     triangles = h.Triangles,
                     formats = h.Formats,
                     price = new { amount = h.PriceAmount, currency = h.PriceCurrency },
+                    free = h.IsFree,
+                    sampleUrl = h.IsFree ? $"/packs/{h.PackSlug}/sample" : null,
                 }),
                 facets = result.Facets,
             });

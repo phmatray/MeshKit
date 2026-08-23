@@ -38,7 +38,7 @@ public class PackManifestTests
     [Fact]
     public void Json_round_trip_preserves_everything()
     {
-        var manifest = PackManifest.FromDefinition(Definition(), DateTimeOffset.UnixEpoch) with
+        var manifest = PackManifest.FromDefinition(Definition() with { Sample = "chest" }, DateTimeOffset.UnixEpoch) with
         {
             Models =
             [
@@ -61,6 +61,7 @@ public class PackManifestTests
         var back = PackManifestSerializer.Deserialize(json);
 
         Assert.Equal(manifest, back);
+        Assert.Equal("chest", back.Sample);
         Assert.Contains("\"status\": \"succeeded\"", json);
         Assert.Contains("\"schemaVersion\": 1", json);
         Assert.Contains("\"previewTextured\": true", json);

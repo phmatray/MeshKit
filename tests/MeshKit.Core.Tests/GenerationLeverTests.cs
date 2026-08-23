@@ -131,6 +131,25 @@ public class GenerationLeverTests
         Assert.Contains(PackDefinitionValidator.Validate(pack), e => e.Contains(field));
     }
 
+    [Fact]
+    public void Sample_names_one_of_the_models_and_reaches_the_manifest()
+    {
+        var pack = PackDefinitionLoader.Load(Yaml.Replace("models:", "sample: pine\nmodels:"));
+
+        Assert.Equal("pine", pack.Sample);
+        Assert.Empty(PackDefinitionValidator.Validate(pack));
+        Assert.Equal("pine", Catalog.PackManifest.FromDefinition(pack, DateTimeOffset.UnixEpoch).Sample);
+    }
+
+    [Fact]
+    public void Sample_that_is_not_a_model_is_reported()
+    {
+        var pack = Valid() with { Sample = "birch" };
+
+        var error = Assert.Single(PackDefinitionValidator.Validate(pack));
+        Assert.Contains("sample 'birch'", error);
+    }
+
     [Theory]
     [InlineData("/etc/palette.png")]
     [InlineData("../palette.png")]

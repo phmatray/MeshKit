@@ -89,6 +89,11 @@ public static partial class PackDefinitionValidator
             }
         }
 
+        if (pack.Sample is { } sample && !pack.Models.Any(m => m.Slug == sample))
+        {
+            errors.Add($"sample '{sample}' is not one of the pack's models (expected one of {Join(pack.Models.Select(m => m.Slug))}).");
+        }
+
         return errors;
     }
 

@@ -9,6 +9,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 
     public DbSet<Entitlement> Entitlements => Set<Entitlement>();
 
+    public DbSet<SampleDownload> SampleDownloads => Set<SampleDownload>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -26,6 +28,13 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
         {
             entitlement.HasIndex(e => new { e.UserId, e.PackSlug }).IsUnique();
             entitlement.Property(e => e.PackSlug).HasMaxLength(128);
+        });
+
+        builder.Entity<SampleDownload>(sample =>
+        {
+            sample.HasIndex(s => new { s.UserId, s.PackSlug });
+            sample.Property(s => s.PackSlug).HasMaxLength(128);
+            sample.Property(s => s.ModelSlug).HasMaxLength(128);
         });
     }
 }

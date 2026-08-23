@@ -15,6 +15,7 @@ packs/<slug>.yaml ──▶ GitHub Action ──▶ Meshy (preview → refine) �
 | Loop | What happens |
 |---|---|
 | **Produce** | Write `packs/<slug>.yaml` (name, price, prompts). Run the *Generate pack* workflow. It calls Meshy once per model — an untextured *preview* (the free in-browser 3D preview) then a textured *refine* (the paid asset) — zips the result, attaches it to a GitHub Release, and optionally pushes it straight into the running store. Re-running resumes: finished models are skipped. |
+| **Try** | Each pack can name one `sample` model. `/packs/<slug>/sample` streams that model (all formats, textures, licence) to any signed-in account — no purchase — and records who tried what; the search page has a *Free to download* facet. |
 | **Buy** | `/packs` lists sellable packs; `/packs/<slug>` shows thumbnails and a `<model-viewer>` preview of each model. *Buy* opens Stripe Checkout. The **webhook** (`checkout.session.completed` / `async_payment_succeeded`, gated on `payment_status == paid`) grants the entitlement — never the success page. `/library` lists owned packs; `/library/<slug>/download` streams a zip of the textured files. |
 | **Operate** | `docker compose up -d` with a `.env`; two bind mounts (`./data` for SQLite + cookie keys, `./catalog` for packs). TLS is your reverse proxy's job. |
 
@@ -39,6 +40,7 @@ slug: lowpoly-fantasy-props
 name: Low-Poly Fantasy Props
 description: Eight game-ready fantasy props …
 price: { amount: 1900, currency: eur }          # minor units, lowercase ISO code
+sample: treasure-chest                         # optional: one model free for any account — "try before you buy"
 generation:
   ai_model: latest                               # meshy-5 | meshy-6 | meshy-7 | latest (= Meshy 7) | meshy-t2
   model_type: standard                           # standard | smart-topology (needs meshy-t2)

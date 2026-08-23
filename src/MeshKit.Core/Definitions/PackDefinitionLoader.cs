@@ -87,7 +87,8 @@ public static class PackDefinitionLoader
             Tags: NormalizeTags(raw.Tags),
             Category: raw.Category?.Trim() ?? "props",
             Style: raw.Style?.Trim() ?? (generation.ModelType == GenerationSettings.ModelTypeLowpoly || generation.ShouldRemesh ? "lowpoly" : "stylized"),
-            License: license);
+            License: license,
+            Sample: string.IsNullOrWhiteSpace(raw.Sample) ? null : raw.Sample.Trim());
     }
 
     private static IReadOnlyList<string> NormalizeTags(List<string>? tags) =>
@@ -111,6 +112,7 @@ public static class PackDefinitionLoader
         public string? Category { get; set; }
         public string? Style { get; set; }
         public LicenseYaml? License { get; set; }
+        public string? Sample { get; set; }
     }
 
     private sealed class LicenseYaml

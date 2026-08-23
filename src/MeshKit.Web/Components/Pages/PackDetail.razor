@@ -59,12 +59,16 @@ else
                 {
                     <li>
                         <a href="packs/@Pack.Slug?model=@model.Slug"
-                           class="block aspect-square overflow-hidden rounded-xl border-2 bg-white @(model.Slug == Selected.Slug ? "border-coral" : "border-transparent hover:border-ink/30")"
+                           class="relative block aspect-square overflow-hidden rounded-xl border-2 bg-white @(model.Slug == Selected.Slug ? "border-coral" : "border-transparent hover:border-ink/30")"
                            aria-current="@(model.Slug == Selected.Slug ? "true" : null)"
-                           title="@model.Name">
+                           title="@(model.Slug == Pack.Sample ? $"{model.Name} — free sample" : model.Name)">
                             @if (model.Thumbnail is not null)
                             {
                                 <img src="@CatalogEndpoints.PublicUrl(Pack.Slug, model.Thumbnail)" alt="@model.Name" loading="lazy" class="h-full w-full object-cover" />
+                            }
+                            @if (model.Slug == Pack.Sample)
+                            {
+                                <span class="absolute left-1 top-1 rounded-full bg-coral px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-ink">Free</span>
                             }
                         </a>
                     </li>
@@ -106,6 +110,34 @@ else
                 </p>
             }
 
+
+            @if (Pack.SampleModel is { } sample)
+            {
+                <aside class="rounded-2xl border border-coral/60 bg-coral/10 p-5" aria-labelledby="sample-heading">
+                    <div class="flex items-start gap-4">
+                        @if (sample.Thumbnail is not null)
+                        {
+                            <img src="@CatalogEndpoints.PublicUrl(Pack.Slug, sample.Thumbnail)" alt="" loading="lazy" class="h-16 w-16 shrink-0 rounded-xl bg-white object-contain p-1" />
+                        }
+                        <div class="min-w-0 flex-1">
+                            <h2 id="sample-heading" class="font-semibold">Free sample: @sample.Name</h2>
+                            <p class="mt-1 text-sm text-ink/70">
+                                Try before you buy — the full @sample.Name with every format and texture, under the same licence as the pack.
+                                Open it in Blender or Unity and judge the topology, UVs, scale and pivot yourself.
+                            </p>
+                            @if (SignedIn)
+                            {
+                                <a href="packs/@Pack.Slug/sample" class="mt-3 inline-block rounded-full bg-ink px-4 py-2 text-sm font-semibold text-cream hover:bg-ink/85">Download free sample (.zip)</a>
+                            }
+                            else
+                            {
+                                <a href="account/login?returnUrl=@Uri.EscapeDataString($"/packs/{Pack.Slug}/sample")" class="mt-3 inline-block rounded-full bg-ink px-4 py-2 text-sm font-semibold text-cream hover:bg-ink/85">Sign in to download the free sample</a>
+                                <span class="ml-2 text-xs text-ink/60">Free account, no card.</span>
+                            }
+                        </div>
+                    </div>
+                </aside>
+            }
         </section>
 
         <section aria-labelledby="inside" class="space-y-4 lg:col-start-2 lg:row-start-2">
@@ -114,7 +146,13 @@ else
                 @foreach (var model in Pack.Models)
                 {
                     <li class="flex items-center justify-between gap-3 px-4 py-2 text-sm">
-                        <a href="packs/@Pack.Slug?model=@model.Slug" class="hover:text-coral-dark">@model.Name</a>
+                        <span class="flex items-center gap-2">
+                            <a href="packs/@Pack.Slug?model=@model.Slug" class="hover:text-coral-dark">@model.Name</a>
+                            @if (model.Slug == Pack.Sample)
+                            {
+                                <span class="rounded-full bg-coral px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink">Free</span>
+                            }
+                        </span>
                         <span class="text-ink/50 tabular-nums">@(model.Metadata is { } m ? $"{Format.Count(m.Triangles)} tris · " : "")@model.Files.Count(f => GenerationFormats.Contains(f.Format)) files</span>
                     </li>
                 }
@@ -160,10 +198,13 @@ else
 
     private bool Owned { get; set; }
 
+    private bool SignedIn { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         Pack = Catalog.Find(Slug);
         var userId = HttpContextAccessor.HttpContext?.User is { Identity.IsAuthenticated: true } user ? Entitlements.UserId(user) : null;
+        SignedIn = userId is not null;
         Owned = Pack is not null && userId is not null && await Entitlements.OwnsAsync(userId, Pack.Slug, CancellationToken.None);
     }
 }

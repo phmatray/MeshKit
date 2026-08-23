@@ -3,6 +3,8 @@
 @inject ICatalogService Catalog
 @inject IEntitlementReader Entitlements
 @inject IHttpContextAccessor HttpContextAccessor
+@inject ApplicationDbContext Db
+@using Microsoft.EntityFrameworkCore
 
 <PageTitle>My library — MeshKit</PageTitle>
 
@@ -38,8 +40,35 @@ else
     </ul>
 }
 
+@if (_samples.Count > 0)
+{
+    <section class="mt-12" aria-labelledby="samples-heading">
+        <h2 id="samples-heading" class="mb-2 text-2xl font-bold">Free samples</h2>
+        <p class="mb-6 text-ink/70">The sample models you tried. The full packs are one click away.</p>
+        <ul class="divide-y divide-ink/10 rounded-2xl border border-ink/10 bg-white">
+            @foreach (var (pack, model) in _samples)
+            {
+                <li class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
+                    <span>
+                        <span class="font-semibold">@model.Name</span>
+                        <span class="text-ink/60"> · from <a href="packs/@pack.Slug" class="underline-offset-2 hover:underline">@pack.Name</a></span>
+                    </span>
+                    <span class="flex gap-2">
+                        <a href="packs/@pack.Slug/sample" class="rounded-full border border-ink/15 px-3 py-1 hover:border-coral-dark">Download again</a>
+                        @if (!_packs.Any(p => p.Slug == pack.Slug))
+                        {
+                            <a href="packs/@pack.Slug" class="rounded-full bg-coral px-3 py-1 font-semibold text-ink hover:bg-coral-dark">Get the pack</a>
+                        }
+                    </span>
+                </li>
+            }
+        </ul>
+    </section>
+}
+
 @code {
     private List<PackManifest> _packs = [];
+    private List<(PackManifest Pack, ModelEntry Model)> _samples = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -52,5 +81,11 @@ else
 
         var slugs = await Entitlements.OwnedPackSlugsAsync(userId, CancellationToken.None);
         _packs = slugs.Select(Catalog.Find).OfType<PackManifest>().ToList();
+
+        var sampled = await Db.SampleDownloads.Where(d => d.UserId == userId).Select(d => d.PackSlug).Distinct().ToListAsync();
+        _samples = sampled.Select(Catalog.Find).OfType<PackManifest>()
+            .Where(p => p.SampleModel is not null)
+            .OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(p => (p, p.SampleModel!)).ToList();
     }
 }

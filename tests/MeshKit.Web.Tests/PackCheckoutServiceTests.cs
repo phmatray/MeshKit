@@ -46,6 +46,10 @@ public sealed class PackCheckoutServiceTests : IDisposable
         Assert.Equal("props", o.Metadata[PackCheckoutService.PackSlugMetadataKey]);
         Assert.Matches("^meshkit-pack-checkout-[a-z]{8}$", o.IntegrationIdentifier);
         Assert.Null(o.PaymentMethodTypes);
+        Assert.True(o.AllowPromotionCodes);                  // launch coupons
+        Assert.True(o.InvoiceCreation.Enabled);              // studios need a proper invoice
+        Assert.True(o.TaxIdCollection.Enabled);              // ...with their VAT number on it
+        Assert.Equal("always", o.CustomerCreation);          // tax-id collection needs a Customer in payment mode
         Assert.Contains("withdrawal right", o.CustomText.Submit.Message);
         Assert.Contains("https://shop.example/legal/terms", o.CustomText.Submit.Message);
         var item = Assert.Single(o.LineItems);

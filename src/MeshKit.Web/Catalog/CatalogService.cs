@@ -71,6 +71,45 @@ public sealed class CatalogService : ICatalogService
         }
     }
 
+    public async Task WriteModelZipAsync(string slug, string modelSlug, Stream destination, CancellationToken cancellationToken)
+    {
+        if (!_packs.TryGetValue(slug, out var pack))
+        {
+            throw new KeyNotFoundException($"Pack '{slug}' is not in the catalog.");
+        }
+
+        var model = pack.Manifest.Models.FirstOrDefault(m => m.Slug == modelSlug)
+            ?? throw new KeyNotFoundException($"Model '{modelSlug}' is not in pack '{slug}'.");
+
+        // Only paths the manifest declares, never a directory walk: the manifest is what was validated at load.
+        var privateRoot = Path.Combine(pack.Directory, PackPaths.PrivateRoot);
+        var files = model.Files.Select(f => f.Path).ToList();
+        if (pack.Manifest.License?.PrivateFile is { } licence)
+        {
+            files.Add(licence);
+        }
+        else if (File.Exists(Path.Combine(privateRoot, "LICENSE.txt")))
+        {
+            files.Add($"{PackPaths.PrivateRoot}/LICENSE.txt");
+        }
+
+        await using var zip = await ZipArchive.CreateAsync(destination, ZipArchiveMode.Create, leaveOpen: true, entryNameEncoding: null, cancellationToken);
+        foreach (var relative in files.Where(PackPaths.IsSafeRelative).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
+        {
+            var full = PackPaths.Resolve(pack.Directory, relative);
+            if (!File.Exists(full))
+            {
+                continue;
+            }
+
+            var inside = relative[(PackPaths.PrivateRoot.Length + 1)..];
+            var entry = zip.CreateEntry($"{slug}-sample/{inside}", CompressionLevel.Fastest);
+            await using var source = File.OpenRead(full);
+            await using var target = await entry.OpenAsync(cancellationToken);
+            await source.CopyToAsync(target, cancellationToken);
+        }
+    }
+
     public void Reload()
     {
         var packs = new Dictionary<string, LoadedPack>(StringComparer.Ordinal);
